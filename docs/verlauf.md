@@ -19,6 +19,8 @@
   - Echtes Patchen mit Einstellungen in der Pak, Live-Mod-Code, Erkennung von v1 und veralteten Mods.
   - Auto-Updater über GitHub-Releases, GitHub Action für den Release-Build.
   - Der User hat entschieden: Repo öffentlich, E-Mail in den Commits bleibt.
+- Repo veröffentlicht: https://github.com/DERO129media/dl-modding-patcher. **Release v2.0.0** per GitHub Action gebaut (20 s).
+- Updater end-to-end getestet: Eine Kopie mit Version 1.9.9 hat sich per `--update-now` von GitHub auf 2.0.0 aktualisiert (SHA256 geprüft), der zweite Lauf meldet „aktuell“. Der Neustart über die Oberfläche (Fenster schließen und neu öffnen) ist noch nicht live getestet.
 
 ## Nächster Schritt
 
