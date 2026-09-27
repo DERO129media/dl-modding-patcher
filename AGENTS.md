@@ -22,7 +22,7 @@ dist/DERO-Patcher.exe --dev --port 8732 --game "<Spielordner-Kopie>" --ui ui [--
 
 1. Version in `src/Program.cs` (`AssemblyVersion`) erhöhen. Das ist die einzige Stelle.
 2. Abschnitt `## vX.Y.Z` in `CHANGELOG.md` schreiben. Er wird zum Release-Text und im Tool angezeigt.
-3. Committen, `git tag vX.Y.Z`, `git push --follow-tags`. Die GitHub Action baut und veröffentlicht `DERO-Patcher.exe` + `.sha256` + `.zip`.
+3. Committen, `git tag -a vX.Y.Z -m vX.Y.Z` (annotiert, sonst nimmt `--follow-tags` ihn nicht mit), `git push --follow-tags`. Die GitHub Action baut und veröffentlicht `DERO-Patcher.exe` + `.sha256` + `.zip`.
 4. **Koop:** Ändert eine Version, wie Dateien geschrieben werden, ändert sich der Mod-Code. Das im CHANGELOG erwähnen („bitte beide updaten und neu patchen“).
 
 ## Harte Regeln
