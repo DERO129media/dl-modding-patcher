@@ -6,6 +6,7 @@ Jeder Abschnitt `## vX.Y.Z` wird beim Release automatisch als Text übernommen u
 
 - **Neue Voreinstellung „DERO“:** die Einstellung des Entwicklers. Wurfmesser, Pfeile, Granaten, Molotows und Autoreparatursets ergiebiger, Pfeile günstiger, mehr Loot und mehr Klingen beim Zerlegen, schnellere Wut im Beast-Modus.
 - Werte für andere Schwierigkeitsgrade stehen jetzt als kleine Kästchen unter der Einstellung.
+- Bei der Todesstrafe erklärt ein „?“ neben dem Regler, wie der XP-Verlust berechnet wird.
 - Kommawerte werden genau angezeigt (z. B. ×1,25 statt gerundet ×1,3).
 - Der Hinweis oben bei einer alten oder veralteten Mod ist weg. Das steht weiter links im Status und unten bei „noch nicht gepatcht“.
 - Der Knopf heißt jetzt „Teilen / Übernehmen“, weil man dort auch Codes von Mitspielern einfügt.

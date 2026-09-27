@@ -137,6 +137,13 @@ header p { margin: 8px 0 0; color: var(--muted); max-width: 640px; }
 .srow .n small.df { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .dfb { padding: 2px 6px; border: 1px solid rgba(168,141,255,.35); border-radius: 5px; background: rgba(168,141,255,.08); color: var(--uv); font-size: 11px; line-height: 1.3; white-space: nowrap; }
 .dfb b { font-weight: 600; }
+.tip { position: relative; display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 7px; vertical-align: 1px; border: 1px solid var(--line2); border-radius: 50%;
+  color: var(--muted); font: 600 11px/1 var(--fd); cursor: help; }
+.tip:hover, .tip:focus-visible { color: var(--text); border-color: var(--accent); }
+.tip::after { content: attr(data-tip); position: absolute; z-index: 20; left: -8px; top: calc(100% + 8px); width: 320px; padding: 10px 12px; border: 1px solid var(--line2); border-radius: 8px;
+  background: var(--panel2); box-shadow: 0 8px 24px rgba(0,0,0,.5); color: var(--text); font: 400 12.5px/1.5 var(--fb); letter-spacing: 0; text-transform: none; white-space: normal;
+  opacity: 0; visibility: hidden; transition: opacity .12s; pointer-events: none; }
+.tip:hover::after, .tip:focus-visible::after { opacity: 1; visibility: visible; }
 .srow .n small.sub b { color: var(--accent2); font-weight: 600; }
 .srow .vals { font: 600 15px/1 var(--fd); letter-spacing: .02em; white-space: nowrap; }
 .srow .vals .o { color: var(--dim); }
@@ -571,6 +578,13 @@ const rangeInfo = (min, max, m, unit = "", pre = "") => m === 1
   : `<span class="o">${pre}${range(min, max)}</span><span class="arrow">→</span><span class="nw">${range(mul(min, m), mul(max, m))}${unit}</span>`;
 const prevInfo = (changed, text) => changed ? `<span class="orig">vorher ${text}</span>` : `<span class="orig">Original</span>`;
 
+// Erklärungen hinter dem „?“ neben einer globalen Einstellung
+const TIPS = {
+  DeathPenalty: () => `Das Spiel zieht dir beim Tod einen festen Anteil deiner XP ab: je nach Stufe 0,5 bis 1,5 %, nachts ×${de(GITEMS.DeathPenalty.example.night, 1)} so viel. `
+    + "Der Regler verändert diesen Verlust: 100 % = wie im Original, 50 % = halb so viel, 0 % = kein Verlust. Das Beispiel unten rechnet es für Stufe 5 aus.",
+};
+const tipIcon = t => t ? `<span class="tip" tabindex="0" role="note" aria-label="${esc(t)}" data-tip="${esc(t)}">?</span>` : "";
+
 // Jede Regler-Zeile wird aus einem Modell gebaut. Beim Ziehen wird nur die Zeile aktualisiert.
 const DIFF_ORDER = ["Leicht", "Schwer", "Albtraum"];
 function gfmt(i, v) {
@@ -599,7 +613,7 @@ function rowModel(path) {
     const info = i.base
       ? (ch ? `<span class="o">${r(o)}</span><span class="arrow">→</span><span class="nw">${r(v)} ${i.unit}</span>` : `<span class="nw">${r(v)} ${i.unit}</span>`)
       : prevInfo(ch, gfmt(i, o));
-    return { label: i.label, sub: esc(i.sub || ""), df: gdiff(i, v), info, value: gfmt(i, v), ch, v, o, min: i.min, max: i.max, step: i.step };
+    return { label: i.label, tip: TIPS[id] && TIPS[id](), sub: esc(i.sub || ""), df: gdiff(i, v), info, value: gfmt(i, v), ch, v, o, min: i.min, max: i.max, step: i.step };
   }
   if (k === "money") {
     const m = MONEY[id], v = S.money[id];
@@ -624,7 +638,7 @@ function rowModel(path) {
 function srow(path, tag = "") {
   const m = rowModel(path);
   return `<div class="srow${m.ch ? " ch" : ""}" data-row="${path}">
-    <div class="n"><div>${esc(m.label)}${tag}${m.sub ? `<small class="sub">${m.sub}</small>` : ""}${m.df ? `<small class="df" title="Werte in den anderen Schwierigkeitsgraden">${m.df}</small>` : ""}</div></div>
+    <div class="n"><div>${esc(m.label)}${tipIcon(m.tip)}${tag}${m.sub ? `<small class="sub">${m.sub}</small>` : ""}${m.df ? `<small class="df" title="Werte in den anderen Schwierigkeitsgraden">${m.df}</small>` : ""}</div></div>
     <div class="vals">${m.info}</div>
     ${slider(path, m.v, m.min, m.max, m.step, m.o, m.label)}
     <div class="mult">${m.value}</div>
