@@ -26,7 +26,8 @@
 
 - Ein Update kann `data0.pak` ändern. Dann liefert eine alte Mod-Pak veraltete Skripte aus und überschreibt damit neue Inhalte.
 - Deshalb liest der Patcher die Originale immer frisch. Er erkennt eine veraltete Pak, indem er die Werte der installierten Pak auf das aktuelle `data0.pak` erneut anwendet und das Ergebnis vergleicht. Weicht es ab, meldet er „veraltet“.
-- Unsere Pak markiert sich mit einer Kopfzeile im Skript: `// DERO-WurfPatcher v1.0 - automatisch erzeugt …`. Daran erkennt das Tool die eigene Pak.
+- Unsere Pak markiert sich mit zwei Kopfzeilen in jedem Skript: `// DERO-Patcher - automatisch erzeugt …` und `// DERO-Einstellungen: {JSON}`. Daran erkennt das Tool die eigene Pak und ihre Werte. v1 schrieb nur `// DERO-WurfPatcher v1.0 …`. Solche Paks gelten als „alte Version“.
+- Durch den neuen Kopf ist der Mod-Code von v2 anders als bei v1, obwohl der Skript-Inhalt identisch ist. Beim Umstieg müssen beide Koop-Spieler einmal neu patchen.
 
 ## Rechte
 

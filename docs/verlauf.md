@@ -13,6 +13,14 @@
 - Wunsch des Users: spielweite Einstellungen in einem eigenen Bereich **Global** bündeln. Im Prototyp umgesetzt mit 34 Einstellungen. „Inventar“ ist darin aufgegangen.
 - UX/UI-Review per Subagent durchgeführt. Alle Befunde umgesetzt, siehe architektur.md → „UX-Entscheidungen“. Außerdem liefert der Extraktor jetzt den vollständigen Inhalt der Material-Bündel mit deutschen Namen.
 
+- **v2 gebaut:**
+  - Die `.exe` hostet die HTML-Oberfläche in einem Edge-App-Fenster.
+  - Parser und Katalog sind nach C# portiert, der Python-Extraktor ist entfallen.
+  - Echtes Patchen mit Einstellungen in der Pak, Live-Mod-Code, Erkennung von v1 und veralteten Mods.
+  - Auto-Updater über GitHub-Releases, GitHub Action für den Release-Build.
+  - Der User hat entschieden: Repo öffentlich, E-Mail in den Commits bleibt.
+
 ## Nächster Schritt
 
-Den Prototyp mit dem Patcher verbinden. Die C#-`.exe` hostet die HTML-UI, der Katalog von Einstellungen liegt im Code, und der Parser aus `tools/extract_data.py` wird nach C# portiert.
+- v2 im echten Spiel testen: beide patchen, Mod-Code vergleichen, Koop beitreten.
+- Die „ungetesteten“ Einstellungen nach und nach im Spiel prüfen, Ergebnisse in `docs/offene-fragen.md` eintragen.

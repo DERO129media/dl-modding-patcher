@@ -250,6 +250,32 @@ table.mx { width: 100%; border-collapse: separate; border-spacing: 0; }
 .toast button { border: 1px solid var(--accent); background: var(--changed); color: var(--accent2); border-radius: 7px; padding: 4px 10px; font-size: 12px; }
 .proto { display: inline-block; margin-top: 12px; font: 700 10px/1 var(--fd); letter-spacing: .2em; color: var(--uv); border: 1px solid rgba(168,141,255,.4); padding: 5px 8px; border-radius: 6px; background: rgba(155,123,255,.08); }
 .empty { color: var(--dim); padding: 40px; text-align: center; }
+.proto[hidden] { display: none; }
+#banners:empty { display: none; }
+#banners { display: grid; gap: 8px; padding: 14px 32px 0; }
+.banner { display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 16px; border-radius: 10px; border: 1px solid var(--line2); background: var(--panel2); font-size: 13px; color: var(--muted); }
+.banner b { color: var(--text); }
+.banner .btn { margin-left: auto; padding: 7px 12px; font-size: 12px; }
+.banner.warn { border-color: rgba(255,160,87,.5); background: rgba(255,107,26,.08); }
+.banner.upd { border-color: rgba(87,209,122,.45); background: rgba(87,209,122,.07); }
+.banner .ic { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 700 13px/1 var(--fd); color: #0a0c0f; background: var(--accent2); }
+.banner.upd .ic { background: var(--good); }
+.status .warn { color: var(--accent2); }
+.status .ver { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--dim); }
+.status .ver button { border: 0; background: none; padding: 0; color: var(--dim); font-size: 11px; text-decoration: underline; }
+.status .ver button:hover { color: var(--text); }
+.notes { max-height: 240px; overflow: auto; white-space: pre-wrap; margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); font: 13px/1.5 var(--fb); }
+.notes:empty { display: none; }
+.err { color: var(--bad); }
+.overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(4,5,7,.85); backdrop-filter: blur(6px); text-align: center; }
+.overlay[hidden] { display: none; }
+.overlay > div { display: grid; gap: 10px; justify-items: center; color: var(--muted); }
+.overlay b { font: 700 24px/1.1 var(--fd); letter-spacing: .06em; text-transform: uppercase; color: var(--text); }
+.spin { width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--line2); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+.nogame { max-width: 560px; margin: 12vh auto; padding: 0 24px; }
+.nogame h1 { font: 700 30px/1.1 var(--fd); letter-spacing: .06em; text-transform: uppercase; }
+.nogame p { color: var(--muted); }
+.nogame code { font: 12px Consolas, monospace; color: var(--accent2); }
 
 @media (max-width: 1100px) {
   .srow { grid-template-columns: minmax(150px, 1fr) minmax(100px, auto) minmax(120px, 1.2fr) 64px 24px; gap: 10px; }
@@ -282,7 +308,7 @@ table.mx { width: 100%; border-collapse: separate; border-spacing: 0; }
     <div class="logo">
       <div class="mark"><i></i><b>DER<span>O</span></b></div>
       <div class="sub">Patcher · The Beast</div>
-      <div class="proto">PROTOTYP</div>
+      <div class="proto" id="proto" hidden>DEMO</div>
     </div>
     <nav id="nav" aria-label="Bereiche"></nav>
     <div class="status" id="status"></div>
@@ -292,6 +318,7 @@ table.mx { width: 100%; border-collapse: separate; border-spacing: 0; }
       <div><h1 id="title"></h1><p id="desc"></p></div>
       <div class="presets"><div class="lbl" id="presetLbl">Voreinstellung</div><div class="seg" id="presets" role="group" aria-labelledby="presetLbl"></div><div class="pdesc" id="pdesc"></div></div>
     </header>
+    <div id="banners"></div>
     <div class="content" id="content"></div>
     <div class="bar">
       <div class="count" id="count">0</div>
@@ -328,11 +355,55 @@ table.mx { width: 100%; border-collapse: separate; border-spacing: 0; }
   <div class="acts"><button class="btn" data-close>Abbrechen</button><button class="btn primary small" id="askOk"><span></span></button></div>
 </div></div>
 
+<div class="modal" id="mUpdate"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="updTitle">
+  <h3 id="updTitle">Update</h3>
+  <p id="updText"></p>
+  <pre class="notes" id="updNotes"></pre>
+  <div class="acts"><button class="btn" data-close>Später</button><button class="btn primary small" id="btnUpdate" data-autofocus><span>Jetzt aktualisieren</span></button></div>
+</div></div>
+
+<div class="overlay" id="overlay" hidden><div><div class="spin"></div><b id="overlayTitle"></b><span id="overlayText"></span></div></div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastAct" hidden>Rückgängig</button></div>
 
-<script src="data.js"></script>
 <script>
-const D = window.DATA;
+// Start: echte Daten von der DERO-Patcher.exe (Token in der URL), sonst Demo mit ui/data.js
+const TOKEN = new URLSearchParams(location.search).get("t");
+async function api(path, body) {
+  const r = await fetch(path, { method: body === undefined ? "GET" : "POST", headers: { "X-Dero-Token": TOKEN, "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body), keepalive: path === "/api/bye" });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok && !j.error) j.error = "Unerwartete Antwort (" + r.status + ")";
+  return j;
+}
+function noGame(server) {
+  document.querySelector(".main").innerHTML = `<div class="nogame"><h1>Spiel nicht gefunden</h1>
+    <p>${(server.game.error || "Der Spielordner wurde nicht automatisch gefunden.").replace(/</g, "&lt;")}</p>
+    <p>Wähle den Ordner <b>„Dying Light The Beast“</b> aus, normalerweise unter <code>Steam\\steamapps\\common</code>.</p>
+    <button class="btn primary" id="btnBrowse0"><span>Spielordner wählen</span></button><p class="err" id="browseErr"></p></div>`;
+  document.getElementById("btnBrowse0").onclick = async () => {
+    const r = await api("/api/browse", {});
+    if (r.ok && r.found) location.reload();
+    else if (r.ok) document.getElementById("browseErr").textContent = r.error || "In diesem Ordner wurde das Spiel nicht gefunden.";
+  };
+}
+(async function boot() {
+  let server = null;
+  if (TOKEN) {
+    try { server = await api("/api/state"); } catch { document.body.innerHTML = "<p style='padding:40px'>Verbindung zum DERO-Patcher verloren. Bitte das Tool neu starten.</p>"; return; }
+    if (!server.data) { noGame(server); return; }
+    window.DATA = server.data;
+  } else {
+    await new Promise((res, rej) => { const s = document.createElement("script"); s.src = "data.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  }
+  window.SERVER = server;
+  const app = document.createElement("script");
+  app.textContent = document.getElementById("app").textContent;
+  document.body.appendChild(app);
+})();
+</script>
+<script type="text/plain" id="app">
+const D = window.DATA, SERVER = window.SERVER, LIVE = !!SERVER, VERSION = LIVE ? SERVER.version : "Demo";
 const $ = s => document.querySelector(s);
 const clone = o => JSON.parse(JSON.stringify(o));
 const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -373,7 +444,7 @@ D.crafting.sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) ||
 const FAM = Object.fromEntries(D.crafting.map(f => [f.id, f]));
 const GITEMS = Object.fromEntries(D.global.flatMap(g => g.items).map(i => [i.id, i]));
 const GCHIPS = { all: "Alle", fort: "Fortschritt", survive: "Überleben", beast: "Beast-Modus", gear: "Ausrüstung & Inventar" };
-const DIS_MATS = [...new Set(D.dismantle.flatMap(x => x.parts.map(p => p.name)))];
+const DIS_MATS = [...new Map(D.dismantle.flatMap(x => x.parts.map(p => [p.item, p.name]))).entries()].map(([item, name]) => ({ item, name }));
 const LOOT = Object.fromEntries(D.loot.map(l => [l.id, l]));
 const MONEY = Object.fromEntries(D.money.map(m => [m.id, m]));
 const SELL = Object.fromEntries(D.trade.sell.map(t => [t.id, t]));
@@ -384,7 +455,7 @@ function original() {
   for (const f of D.crafting) s.craft[f.id] = f.tiers.map(t => ({ mats: t.mats.map(m => m[1]), out: t.out, head: t.head ?? null }));
   for (const l of D.loot) s.loot[l.id] = 1;
   for (const m of D.money) s.money[m.id] = 1;
-  for (const m of DIS_MATS) s.dis[m] = 1;
+  for (const m of DIS_MATS) s.dis[m.item] = 1;
   for (const t of D.trade.sell) s.trade[t.id] = t.value;
   s.trade.buy = D.trade.buy;
   return s;
@@ -424,9 +495,14 @@ const PRESET_INFO = {
   big: ["Großzügig", "Halbe Rezeptkosten, doppelter Output und Loot, bessere Händlerpreise, mehr Platz, leichteres Überleben."],
 };
 
+// installed = { pak, code, diff, legacy, outdated } – die Mod-Datei im Spielordner (liefert die .exe)
+let installed = LIVE ? (SERVER.installed || null) : { pak: "data2.pak", legacy: false, outdated: false };
 let S = PRESETS.dero();
-// Simulation: so tut der Prototyp, als wäre die DeRo-Pak schon installiert
-let installed = { state: PRESETS.dero(), pak: "data2.pak" };
+if (installed && installed.diff && !installed.legacy) { try { S = validate(installed.diff); } catch {} }
+if (!LIVE) { installed.diff = diff(); installed.code = fnvCode(installed.diff); }
+// Stabiler Vergleich unabhängig von der Schlüssel-Reihenfolge
+const stable = o => JSON.stringify(o, (k, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(x => [x, v[x]])) : v);
+const isInstalled = () => !!installed && !installed.legacy && !installed.outdated && stable(installed.diff || {}) === stable(diff());
 const ui = { sec: "glob", cat: "all", gchip: "all", q: "", only: false, tier: {}, split: {} };
 
 function changes(st = S) {
@@ -507,8 +583,8 @@ function rowModel(path) {
     return { label: l.bundle, sub, info: prevInfo(v !== 1, "×1,0"), value: "×" + de(v, 1), ch: v !== 1, v, o: 1, min: 0.5, max: 5, step: 0.5 };
   }
   if (k === "dis") {
-    const v = S.dis[id], best = D.dismantle.flatMap(x => x.parts).filter(p => p.name === id).reduce((a, p) => (!a || p.max > a.max ? p : a), null);
-    return { label: id, sub: "Bestwert über alle Waffen", info: rangeInfo(best.min, best.max, v, " Stück", "bis "), value: "×" + de(v, 1), ch: v !== 1, v, o: 1, min: 0.5, max: 5, step: 0.5 };
+    const v = S.dis[id], best = D.dismantle.flatMap(x => x.parts).filter(p => p.item === id).reduce((a, p) => (!a || p.max > a.max ? p : a), null);
+    return { label: best.name, sub: "Bestwert über alle Waffen", info: rangeInfo(best.min, best.max, v, " Stück", "bis "), value: "×" + de(v, 1), ch: v !== 1, v, o: 1, min: 0.5, max: 5, step: 0.5 };
   }
   if (k === "trade") {
     const v = S.trade[id], o = ORIG.trade[id];
@@ -631,11 +707,11 @@ function renderLoot() {
 function renderDis() {
   const types = [...new Set(D.dismantle.map(x => x.type))];
   const cell = x => x ? x.parts.map(p => {
-    const m = S.dis[p.name], ch = m !== 1;
+    const m = S.dis[p.item], ch = m !== 1;
     return `<div class="part${ch ? " ch" : ""}"><span>${esc(p.name)}</span><b>${ch ? `<s>${range(p.min, p.max)}</s>` : ""}${range(mul(p.min, m), mul(p.max, m))}</b></div>`;
   }).join("") : "–";
   const rows = types.map(t => `<tr><td>${esc(t)}</td>${[1, 2, 3].map(n => `<td>${cell(D.dismantle.find(x => x.type === t && x.tier === n))}</td>`).join("")}</tr>`).join("");
-  const paths = DIS_MATS.map(n => `dis|${n}`);
+  const paths = DIS_MATS.map(m => `dis|${m.item}`);
   return `<div class="toolbar">${secReset("dis")}</div>`
     + panel("Ausbeute pro Material", "Gilt für alle zerlegten Waffen. Klingen kommen nur aus Klingenwaffen ab Stufe 2.", paths.map(p => srow(p)).join(""), paths.some(p => rowModel(p).ch))
     + `<div class="panel"><h2>Vorschau</h2><p class="hint">Was beim Zerlegen einer Waffe herauskommt, nach Waffentyp und Stufe.</p>
@@ -652,11 +728,39 @@ function renderTrade() {
 
 // ---------- Rahmen ----------
 const RENDER = { glob: renderGlob, craft: renderCraft, loot: renderLoot, dis: renderDis, trade: renderTrade };
-function modCode(st = S) {
+// Demo: Platzhalter-Hash. Echt: MD5 der Pak, die die .exe im Speicher baut (ohne etwas zu schreiben).
+function fnvCode(d) {
   let h = 2166136261;
-  for (const ch of JSON.stringify(diff(st))) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  for (const ch of JSON.stringify(d)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
   const x = h.toString(16).toUpperCase().padStart(8, "0");
   return x.slice(0, 4) + "-" + x.slice(4);
+}
+let preview = { key: null, code: null, files: [], error: null }, previewTimer = null;
+function modCode() {
+  const d = diff(), key = stable(d);
+  if (!LIVE) return fnvCode(d);
+  if (preview.key === key) return preview.code;
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    const r = await api("/api/preview", { diff: d }).catch(() => ({ error: "Keine Verbindung zum Tool" }));
+    preview = { key, code: r.code || null, files: r.files || [], error: r.error || null };
+    if (stable(diff()) === key) renderChrome();
+  }, 250);
+  return undefined;   // wird gerade berechnet
+}
+const shortDir = d => !d ? "" : d.length > 42 ? "…" + d.slice(-40) : d;
+function banners() {
+  const b = [];
+  if (ui.update) b.push(`<div class="banner upd"><span class="ic">↑</span><div><b>Update verfügbar: Version ${esc(ui.update.latest)}</b> · du hast ${esc(ui.update.current)}</div>
+    <button class="btn" data-open-update="1">Ansehen</button></div>`);
+  if (installed && (installed.legacy || installed.outdated)) {
+    const why = installed.legacy ? `<b>Alte Version installiert</b> – ${esc(installed.pak)} stammt noch vom WurfPatcher v1.`
+      : `<b>Mod ist veraltet</b> – das Spiel wurde seit dem letzten Patchen aktualisiert.`;
+    b.push(`<div class="banner warn"><span class="ic">!</span><div>${why} Einmal neu patchen, dann passt alles (im Koop beide).</div>
+      <button class="btn" data-patch-now="1">Jetzt patchen</button></div>`);
+  }
+  if (LIVE && SERVER.conflicts && SERVER.conflicts.length) b.push(`<div class="banner warn"><span class="ic">!</span><div><b>Anderer Mod gefunden:</b> ${esc(SERVER.conflicts.join(", "))} ändert dieselben Spieldateien. Die Mods überschreiben sich gegenseitig.</div></div>`);
+  return b.join("");
 }
 function renderChrome() {
   const c = changes(), n = total(c), sec = SECTIONS.find(s => s.id === ui.sec);
@@ -672,15 +776,21 @@ function renderChrome() {
   $("#count").textContent = n;
   $("#count").classList.toggle("zero", !n);
   $("#what").textContent = n ? summary(c) : "Noch alles original";
-  const inst = installed && eq(installed.state, S);
+  const code = n ? modCode() : null;
   $("#modc").innerHTML = n
-    ? `Mod-Code<b>${modCode()}</b>${inst ? `<span class="ok">✓ so installiert</span>` : `<span class="pend">noch nicht gepatcht</span>`}`
+    ? `Mod-Code<b>${code === undefined ? "…" : code ? code : "–"}</b>${preview.error && LIVE && code === null ? `<span class="pend" title="${esc(preview.error)}">Fehler – Details beim Patchen</span>`
+      : isInstalled() ? `<span class="ok">✓ so installiert</span>` : `<span class="pend">noch nicht gepatcht</span>`}`
     : installed ? `<span class="pend">Mod ist noch installiert</span>` : `Kein Mod nötig`;
-  $("#status").innerHTML = `<div class="row"><div class="dot"></div><div><b>Spiel gefunden</b><code>…\\steamapps\\common\\Dying Light The Beast</code></div></div>`
+  const dir = LIVE ? SERVER.game.dir : "…\\steamapps\\common\\Dying Light The Beast";
+  $("#status").innerHTML = `<div class="row"><div class="dot"></div><div><b>Spiel gefunden</b><code title="${esc(dir)}">${esc(shortDir(dir))}</code>${LIVE ? `<br><button class="linkbtn" id="btnBrowse">Ordner ändern</button>` : ""}</div></div>`
     + (installed
-      ? `<div class="row"><div class="dot mod"></div><div><b>Mod aktiv · ${installed.pak}</b>Mod-Code ${modCode(installed.state)}<br><button class="linkbtn" id="btnRemove">Mod entfernen</button></div></div>`
+      ? `<div class="row"><div class="dot mod"></div><div><b>${installed.legacy ? "Alte Version" : "Mod aktiv"} · ${esc(installed.pak)}</b>${installed.legacy || installed.outdated
+          ? `<span class="warn">Bitte einmal neu patchen.</span>` : `Mod-Code ${esc(installed.code || "")}`}<br><button class="linkbtn" id="btnRemove">Mod entfernen</button></div></div>`
       : `<div class="row"><div class="dot off"></div><div><b>Kein Mod installiert</b>Das Spiel läuft mit Originaldaten.</div></div>`)
-    + `<div class="note">Originaldateien werden nie verändert. Der Mod ist eine eigene Datei.</div>`;
+    + `<div class="note">Originaldateien werden nie verändert. Der Mod ist eine eigene Datei.</div>`
+    + `<div class="ver"><span>Version ${esc(VERSION)}</span>${LIVE ? `<button id="btnCheckUpd">Nach Updates suchen</button>` : ""}</div>`;
+  $("#banners").innerHTML = banners();
+  $("#proto").hidden = LIVE;
 }
 
 // Fokus nach dem Neuzeichnen wiederherstellen (Tastaturbedienung)
@@ -777,8 +887,10 @@ function diff(st = S) {
 const toB64 = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const fromB64 = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
 const pipe = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+// Code = "DERO2." + base64url(deflate({ v: Tool-Version, d: Diff })). DERO1 (unkomprimiert, nur Diff) wird noch gelesen.
 async function encodeShare() {
-  return "DERO2." + toB64(await pipe(new TextEncoder().encode(JSON.stringify(diff())), new CompressionStream("deflate-raw")));
+  const payload = JSON.stringify({ v: VERSION, d: diff() });
+  return "DERO2." + toB64(await pipe(new TextEncoder().encode(payload), new CompressionStream("deflate-raw")));
 }
 async function decodeShare(raw) {
   raw = raw.replace(/\s+/g, "");
@@ -789,7 +901,8 @@ async function decodeShare(raw) {
     else throw 0;
     json = JSON.parse(json);
   } catch { throw "Das ist kein gültiger DERO-Code. Wurde er vollständig kopiert?"; }
-  return validate(json);
+  const wrapped = json && typeof json === "object" && "d" in json && "v" in json;
+  return { s: validate(wrapped ? json.d : json), ver: wrapped ? String(json.v) : null };
 }
 function validate(d) {
   if (!d || typeof d !== "object" || Array.isArray(d)) throw "Der Code ist beschädigt.";
@@ -824,12 +937,13 @@ async function checkShare() {
   pendingShare = null; $("#btnApply").disabled = true;
   if (!raw) { st.textContent = ""; st.className = "shint"; return; }
   try {
-    const s = await decodeShare(raw);
+    const { s, ver } = await decodeShare(raw);
     if (seq !== shareSeq) return;
     const c = changes(s);
     pendingShare = s; $("#btnApply").disabled = false;
     st.className = "shint ok";
-    st.textContent = `✓ Gültig: ${total(c) ? summary(c) : "alles original"}. Ersetzt deine aktuellen Einstellungen.`;
+    st.textContent = `✓ Gültig: ${total(c) ? summary(c) : "alles original"}. Ersetzt deine aktuellen Einstellungen.`
+      + (ver && ver !== VERSION ? ` Achtung: Der Code stammt aus Version ${ver}, du hast ${VERSION}. Für den gleichen Mod-Code bitte beide auf denselben Stand bringen.` : "");
   } catch (e) {
     if (seq !== shareSeq) return;
     st.className = "shint err"; st.textContent = typeof e === "string" ? e : "Der Code konnte nicht gelesen werden.";
@@ -857,9 +971,10 @@ async function copyAndToast(text, what) {
   toast(await copyText(text) ? `${what} kopiert` : `Kopieren hat nicht geklappt – bitte markieren und mit Strg+C kopieren`);
 }
 
-// ---------- Patchen (Simulation) ----------
+// ---------- Patchen ----------
 const FILES = { craft: ["collectables_ft.scr", "inventory.scr"], loot: ["lootsets_ft.loot"], dis: ["lootsets_ft.loot"], trade: ["price_manager_params*.scr", "player_variables.scr"] };
 function patchFiles(c) {
+  if (LIVE && preview.key === stable(diff())) return preview.files;
   const f = [];
   for (const k in FILES) if (c[k].length) f.push(...FILES[k]);
   for (const id of c.glob) f.push(...GITEMS[id].files);
@@ -868,40 +983,48 @@ function patchFiles(c) {
 function openPatch() {
   const c = changes(), n = total(c);
   if (!n) {
-    $("#patchBody").innerHTML = `<p>Alles steht auf Original – es gibt nichts zu patchen.</p>${installed ? `<p>Es ist aber noch ein Mod installiert (${installed.pak}). Entferne ihn, damit das Spiel wieder komplett original ist.</p>` : ""}`;
+    $("#patchBody").innerHTML = `<p>Alles steht auf Original – es gibt nichts zu patchen.</p>${installed ? `<p>Es ist aber noch ein Mod installiert (${esc(installed.pak)}). Entferne ihn, damit das Spiel wieder komplett original ist.</p>` : ""}`;
     $("#patchActs").innerHTML = `<button class="btn" data-close>Schließen</button>${installed ? `<button class="btn danger" id="btnRemove2">Mod entfernen</button>` : ""}`;
   } else {
-    const files = patchFiles(c);
+    const code = modCode();
+    const target = installed ? esc(installed.pak) : "eine eigene Mod-Datei (data2.pak bis data7.pak)";
     $("#patchBody").innerHTML = `<p>Das wird geändert:</p>
       <div class="sumlist">${SECTIONS.filter(s => c[s.id].length).map(s => `<div><span>${s.label}</span><b>${c[s.id].length}</b></div>`).join("")}</div>
       <ul class="checks">
         <li class="warn">Das Spiel muss dafür geschlossen sein.</li>
-        <li>Originaldateien bleiben unverändert, es wird nur ${installed ? installed.pak : "data2.pak"} geschrieben (${files.length} angepasste Spieldateien).</li>
+        <li>Originaldateien bleiben unverändert, geschrieben wird nur ${target}.</li>
         <li>Rückgängig jederzeit über „Mod entfernen“.</li>
-        <li>Koop: Deine Partnerin braucht danach denselben Mod-Code <b>${modCode()}</b>.</li>
-      </ul>
-      <p style="margin:14px 0 0;font-size:12px;color:var(--dim)">Prototyp – es wird nichts geschrieben.</p>`;
+        <li>Koop: Deine Partnerin braucht danach denselben Mod-Code${code ? ` <b>${code}</b>` : ""}.</li>
+      </ul>${LIVE ? "" : `<p style="margin:14px 0 0;font-size:12px;color:var(--dim)">Demo – es wird nichts geschrieben.</p>`}`;
     $("#patchActs").innerHTML = `<button class="btn" data-close>Abbrechen</button><button class="btn primary small" id="btnDoPatch" data-autofocus><span>Jetzt patchen</span></button>`;
   }
   openModal("#mPatch");
 }
-function runPatch() {
-  const files = patchFiles(changes()), pak = installed ? installed.pak : "data2.pak";
-  const steps = ["Originaldaten aus data0.pak lesen", `${files.length} Spieldateien anpassen`, `${pak} schreiben`, "Prüfen"];
-  $("#patchBody").innerHTML = `<div class="steps">${steps.map((s, i) => `<div class="stp" id="st${i}"><i></i>${s}${i === 1 ? `<span class="files">${files.join(" · ")}</span>` : ""}</div>`).join("")}</div>`;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function runPatch() {
+  const d = diff(), files = patchFiles(changes());
+  const steps = ["Originaldaten aus data0.pak lesen", `${files.length} Spieldateien anpassen`, "Mod-Datei schreiben", "Prüfen"];
+  $("#patchBody").innerHTML = `<div class="steps">${steps.map((s, i) => `<div class="stp" id="st${i}"><i></i>${s}${i === 1 ? `<span class="files">${esc(files.join(" · "))}</span>` : ""}</div>`).join("")}</div>`;
   $("#patchActs").innerHTML = "";
-  steps.forEach((_, i) => {
-    setTimeout(() => { $("#st" + i).className = "stp run"; }, i * 520);
-    setTimeout(() => {
-      $("#st" + i).className = "stp done"; $("#st" + i + " i").textContent = "✓";
-      if (i === steps.length - 1) finishPatch(pak);
-    }, i * 520 + 480);
-  });
+  const step = (i, cls) => { $("#st" + i).className = "stp " + cls; if (cls === "done") $("#st" + i + " i").textContent = "✓"; };
+  let res;
+  if (LIVE) {
+    step(0, "run");
+    [res] = await Promise.all([api("/api/patch", { diff: d }).catch(() => ({ error: "Keine Verbindung zum Tool." })), sleep(500)]);
+    if (res.error) {
+      $("#patchBody").innerHTML = `<p class="err">${esc(res.error)}</p>`;
+      $("#patchActs").innerHTML = `<button class="btn" data-close>Schließen</button><button class="btn primary small" id="btnDoPatch" data-autofocus><span>Nochmal versuchen</span></button>`;
+      $("#btnDoPatch").focus();
+      return;
+    }
+  } else res = { pak: installed ? installed.pak : "data2.pak", code: fnvCode(d), files };
+  for (let i = 0; i < steps.length; i++) { step(i, "run"); await sleep(LIVE ? 160 : 480); step(i, "done"); }
+  finishPatch(res, d);
 }
-function finishPatch(pak) {
-  installed = { state: clone(S), pak };
-  const code = modCode();
-  $("#patchBody").innerHTML = `<div class="result"><small>Fertig! Dein Mod-Code</small><div class="big">${code}</div>
+function finishPatch(res, d) {
+  installed = { pak: res.pak, code: res.code, diff: d, legacy: false, outdated: false };
+  preview = { key: stable(d), code: res.code, files: res.files || [], error: null };
+  $("#patchBody").innerHTML = `<div class="result"><small>Fertig! Gespeichert als ${esc(res.pak)} · Dein Mod-Code</small><div class="big">${esc(res.code)}</div>
       <button class="btn" id="btnCopyCode">Mod-Code kopieren</button></div>
     <div class="coop"><b>Koop:</b> Deine Partnerin muss denselben Mod-Code haben. Schick ihr deinen Teilen-Code, sie übernimmt ihn und patcht ebenfalls.
       <br><button class="btn" id="btnCopyShare">Teilen-Code kopieren</button></div>
@@ -913,10 +1036,55 @@ function finishPatch(pak) {
 async function removeMod() {
   if (!installed) return;
   if (!await ask("Mod entfernen?", `${installed.pak} wird gelöscht, das Spiel ist danach wieder original. Deine Einstellungen hier bleiben erhalten. Im Koop muss auch deine Partnerin den Mod entfernen.`, "Mod entfernen")) return;
+  if (LIVE) {
+    const r = await api("/api/remove", {}).catch(() => ({ error: "Keine Verbindung zum Tool." }));
+    if (r.error) { toast(r.error); return; }
+  }
   installed = null;
   closeModal($("#mPatch"));
   render();
   toast("Mod entfernt – das Spiel ist wieder original");
+}
+
+// ---------- Updates, Spielordner, Verbindung ----------
+async function checkUpdate(force) {
+  const r = await api("/api/update" + (force ? "?force=1" : "")).catch(() => ({ error: "offline" }));
+  ui.update = r.available ? r : null;
+  if (force) toast(r.available ? `Version ${r.latest} ist verfügbar` : r.error ? "Update-Prüfung fehlgeschlagen – keine Verbindung zu GitHub?" : "Du hast die neueste Version");
+  renderChrome();
+}
+function openUpdate() {
+  const u = ui.update;
+  if (!u) return;
+  $("#updTitle").textContent = `Version ${u.latest} ist da`;
+  $("#updText").textContent = `Du hast Version ${u.current}. Das Tool lädt die neue Version von GitHub, prüft sie und startet neu. Deine installierte Mod bleibt unverändert.`;
+  $("#updNotes").textContent = (u.notes || "").trim();
+  openModal("#mUpdate");
+}
+function overlay(title, text) {
+  $("#overlayTitle").textContent = title;
+  $("#overlayText").textContent = text;
+  $("#overlay").hidden = !title;
+}
+async function installUpdate() {
+  closeModal($("#mUpdate"));
+  overlay("Update wird installiert", "Die neue Version wird geladen und geprüft …");
+  const r = await api("/api/update", {}).catch(() => ({ error: "Keine Verbindung zum Tool." }));
+  if (r.error) {
+    overlay("");
+    await ask("Update fehlgeschlagen", r.error + (r.url ? " Du kannst die neue Version auch selbst bei GitHub herunterladen." : ""), "OK");
+    return;
+  }
+  overlay("Neustart", `Version ${r.version} ist installiert. Das Fenster öffnet sich gleich neu.`);
+}
+async function browseGame() {
+  const r = await api("/api/browse", {}).catch(() => ({}));
+  if (r.ok) location.reload();
+}
+if (LIVE) {
+  setInterval(() => api("/api/ping", {}).catch(() => {}), 20000);
+  addEventListener("pagehide", () => { api("/api/bye", {}).catch(() => {}); });
+  setTimeout(() => checkUpdate(false), 1200);
 }
 
 let tt, toastUndo = null;
@@ -961,9 +1129,14 @@ document.addEventListener("click", async e => {
   else if (t.id === "btnApply") applyShare();
   else if (t.id === "btnPatch") openPatch();
   else if (t.id === "btnDoPatch") runPatch();
-  else if (t.id === "btnCopyCode") copyAndToast(modCode(), "Mod-Code");
+  else if (t.id === "btnCopyCode") copyAndToast(installed ? installed.code : "", "Mod-Code");
   else if (t.id === "btnCopyShare") copyAndToast(await encodeShare(), "Teilen-Code");
   else if (t.id === "btnRemove" || t.id === "btnRemove2") removeMod();
+  else if (t.id === "btnBrowse") browseGame();
+  else if (t.id === "btnCheckUpd") checkUpdate(true);
+  else if (t.id === "btnUpdate") installUpdate();
+  else if (d.openUpdate) openUpdate();
+  else if (d.patchNow) openPatch();
 });
 document.addEventListener("change", e => {
   const t = e.target, box = t.closest(".step");

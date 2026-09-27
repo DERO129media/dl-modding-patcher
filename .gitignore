@@ -11,5 +11,7 @@ extract/
 *.loot
 
 # Sonstiges
-__pycache__/
 *.log
+*.old
+*.new
+*.tmp
