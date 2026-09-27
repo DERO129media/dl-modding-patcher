@@ -115,9 +115,6 @@ header p { margin: 8px 0 0; color: var(--muted); max-width: 640px; }
 .card-f .reset:hover { color: var(--accent2); }
 .link { border: 0; background: none; padding: 0; color: var(--accent2); font-size: 12px; }
 .link:hover { text-decoration: underline; }
-.ut { display: inline-block; margin-left: 10px; vertical-align: 2px; font: 600 10px/1 var(--fd); letter-spacing: .14em; text-transform: uppercase; color: var(--uv);
-  border: 1px solid rgba(168,141,255,.45); padding: 3px 6px; border-radius: 5px; cursor: help; }
-.row .ut { margin-left: 2px; vertical-align: 0; }
 
 /* Stepper */
 .step { display: inline-flex; align-items: stretch; border: 1px solid var(--line2); border-radius: 8px; background: var(--bg); overflow: hidden; }
@@ -447,7 +444,6 @@ const SECTIONS = [
   { id: "trade", label: "Händler", title: "Händler", desc: "Wie viel dir Händler zahlen und was Einkäufe kosten." },
 ];
 const TIERC = ["var(--r-white)", "var(--r-green)", "var(--r-blue)", "var(--r-violet)", "var(--r-orange)"];
-const UT = '<span class="ut" title="Noch nicht im Spiel ausprobiert. Die Wirkung ist aus dem Spielcode abgeleitet.">ungetestet</span>';
 const KNIFE = "Craftplan_ThrowingKnives_FT";
 
 // ---------- Zustand ----------
@@ -633,8 +629,8 @@ function patchRow(row) {
   if (df) df.textContent = m.df;
   row.querySelector(".rst").hidden = !m.ch;
 }
-const panel = (title, hint, body, changed, ut = true) =>
-  `<div class="panel${changed ? " changed" : ""}"><h2>${esc(title)}${ut ? UT : ""}</h2>${hint ? `<p class="hint">${hint}</p>` : ""}${body}</div>`;
+const panel = (title, hint, body, changed) =>
+  `<div class="panel${changed ? " changed" : ""}"><h2>${esc(title)}</h2>${hint ? `<p class="hint">${hint}</p>` : ""}${body}</div>`;
 const secReset = sec => changes()[sec].length ? `<button class="chip sec-reset" data-reset-sec="${sec}">↺ Bereich zurücksetzen</button>` : "";
 
 // Beispiel-Boxen, die beim Ziehen mitlaufen
@@ -687,7 +683,7 @@ function craftCard(f) {
     const name = D.materials[m[0]] || m[0];
     return `<div class="row"><div class="lab">${esc(name)}</div><div class="right">${stepper(`craft|${f.id}|${ti}|mats|${j}`, cur.mats[j], o.mats[j], { max: 999, label: L(name) })}</div></div>`;
   }).join("");
-  const head = cur.head != null ? `<div class="row"><div class="lab">Kopfschuss-Multiplikator${UT}</div>
+  const head = cur.head != null ? `<div class="row"><div class="lab">Kopfschuss-Multiplikator</div>
       <div class="right">${stepper(`craft|${f.id}|${ti}|head`, cur.head, o.head, { step: 0.1, dec: 1, min: 0.5, max: 20, label: L("Kopfschuss-Multiplikator") })}</div></div>` : "";
   const dmg = split ? t.damage : multi && f.tiers[0].damage ? `${f.tiers[0].damage} bis ${last.damage}` : t.damage;
   const info = [dmg && `<span class="pill">Schaden <b>${dmg}</b></span>`, `<span class="pill">${esc(CATS[f.cat])}</span>`].filter(Boolean).join("");

@@ -29,15 +29,15 @@ Am besten nutzen alle dieselbe Tool-Version. Sie steht unten links.
 
 ## Was lässt sich ändern?
 
-| Bereich | Beispiele | Im Spiel getestet? |
-|---|---|---|
-| Crafting | Materialkosten, Menge pro Craft, Kopfschuss bei Wurfwaffen (37 Rezepte) | Kosten und Menge **ja**, Kopfschuss noch nicht |
-| Global | Erfahrung, Todesstrafe, Ausdauer, Heilung, Beast-Modus, Material-Bonus, Reparatur, Inventarplätze, Stapelgrößen | noch nicht |
-| Loot | Menge pro Fund für Materialien und Geld | noch nicht |
-| Zerlegen | Material beim Zerlegen von Waffen | noch nicht |
-| Händler | Verkaufs- und Einkaufspreise | noch nicht |
+| Bereich | Beispiele |
+|---|---|
+| Crafting | Materialkosten, Menge pro Craft, Kopfschuss bei Wurfwaffen (37 Rezepte) |
+| Global | Erfahrung, Todesstrafe, Ausdauer, Heilung, Beast-Modus, Material-Bonus, Reparatur, Inventarplätze, Stapelgrößen |
+| Loot | Menge pro Fund für Materialien und Geld |
+| Zerlegen | Material beim Zerlegen von Waffen |
+| Händler | Verkaufs- und Einkaufspreise |
 
-Alles, was noch nicht im Spiel ausprobiert wurde, trägt im Tool das Label **„ungetestet“**. Die Wirkung ist aus den Spielskripten abgeleitet. Rückmeldungen dazu sind willkommen: [Issue anlegen](https://github.com/DERO129media/dl-modding-patcher/issues).
+Etwas funktioniert nicht wie erwartet? [Issue anlegen](https://github.com/DERO129media/dl-modding-patcher/issues).
 
 ## Gut zu wissen
 

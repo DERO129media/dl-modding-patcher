@@ -47,7 +47,6 @@ Gut zu wissen:
     Dann einfach nochmal auf "Patchen" klicken (im Koop alle).
   - Wer noch den alten "DERO-WurfPatcher" benutzt hat: Der neue erkennt dessen Mod
     und ersetzt ihn beim ersten Patchen. Den alten kannst du löschen.
-  - Werte mit dem Hinweis "ungetestet" wurden noch nicht im Spiel ausprobiert.
   - Deinstallieren: "Mod entfernen" klicken, dann die .exe löschen.
 
 Inoffizielles Fan-Tool, nicht verbunden mit Techland. Nutzung auf eigene Gefahr.

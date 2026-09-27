@@ -45,4 +45,4 @@
 ## Nächster Schritt
 
 - v2 im echten Spiel testen: beide patchen, Mod-Code vergleichen, Koop beitreten.
-- Die „ungetesteten“ Einstellungen nach und nach im Spiel prüfen, Ergebnisse in `docs/offene-fragen.md` eintragen.
+- Die Einstellungen im Spiel durchtesten, Fehler beheben, Ergebnisse in `docs/offene-fragen.md` eintragen.

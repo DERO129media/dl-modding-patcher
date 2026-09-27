@@ -148,7 +148,7 @@ WinForms, nur Wurfmesser (Kosten, Output, Kopfschuss) für T1–T4. Mechanik wie
 - **Zurücksetzen** ist auf drei Ebenen möglich: ↺ pro Regler-Zeile, Klick auf den durchgestrichenen Originalwert am Stepper und „Bereich zurücksetzen“ in der Toolbar. Ein Strich auf dem Regler markiert den Originalwert.
 - **Wertanzeige:** Rechts steht der aktuelle Wert. In der Mitte steht die Wirkung (z. B. „3–4 → 6–8 Stück“), wo es eine gibt, sonst „Original“ bzw. „vorher X“. So wird nichts doppelt angezeigt.
 - **Crafting-Stufen:** Alle 37 Rezepte kosten im Original auf T1–T4 gleich viel. Deshalb gilt eine Karte standardmäßig für alle Stufen. „Stufen einzeln anpassen“ blendet die Stufen-Knöpfe ein, geänderte Stufen tragen einen Punkt. Weichen die Stufen voneinander ab, erscheint „Alle Stufen wie Tx setzen“. Dazu gibt es den Filter „Nur geänderte“.
-- **Ehrlichkeit:** Das Label „ungetestet“ steht an allem, was noch nicht im Spiel verifiziert ist. Verifiziert sind bisher nur Crafting-Kosten und -Output.
+- **Kein Teststatus im Tool** (Entscheidung des Users 2026-09-27, ersetzt das frühere Label „ungetestet“): Es wird davon ausgegangen, dass alles funktioniert, Fehler werden behoben. Was im Spiel verifiziert ist, steht nur intern in `docs/spieldaten.md` und `docs/offene-fragen.md`.
 - **Patchen-Dialog** in drei Schritten:
   1. Zusammenfassung mit dem Hinweis „Spiel muss geschlossen sein“, den Originaldateien und „Mod entfernen“.
   2. Fortschritt.

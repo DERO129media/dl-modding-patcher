@@ -32,7 +32,7 @@ dist/DERO-Patcher.exe --dev --port 8732 --game "<Spielordner-Kopie>" --ui ui [--
 - Originalwerte immer **live aus `data0.pak`** lesen, nie Spieldateien im Repo mitliefern. `ui/data.js` ist in `.gitignore`.
 - Skripte als Latin-1 lesen und schreiben (reines ASCII, CRLF) und nur die Zielzeilen ersetzen. Nach jeder Patch-Änderung per Diff prüfen, dass sonst nichts anders ist (Vorlage: Test „alle Einstellungen“ in [docs/architektur.md](docs/architektur.md)).
 - `csc.exe` aus .NET Framework 4 kann nur **C# 5**: kein `$"..."`, kein `?.`, keine `=>`-Member, keine ` `-Zeichenliterale. Umlaute brauchen `/codepage:65001` (steht in build.bat).
-- Behauptungen über das Spiel als **verifiziert** oder **angenommen** kennzeichnen. Im Tool steht bei Ungetestetem das Label „ungetestet“.
+- In der internen Doku (`docs/`) Behauptungen über das Spiel als **verifiziert** oder **angenommen** kennzeichnen. Im Tool und in README/LIESMICH gibt es bewusst **keinen** Teststatus (Entscheidung des Users 2026-09-27): Es wird davon ausgegangen, dass alles funktioniert, Fehler werden behoben.
 - **Keine Hinweise auf KI-Werkzeuge** in Commits, PRs, Code, Doku oder Tags: kein `Co-Authored-By`, kein „Generated with …“, keine Werkzeugnamen. Werkzeugspezifische Dateien bleiben lokal (per `.git/info/exclude`) und werden nie eingecheckt.
 
 ## Aufbau
