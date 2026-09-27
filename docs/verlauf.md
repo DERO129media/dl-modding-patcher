@@ -40,6 +40,7 @@
   - `LIESMICH.txt` korrigiert: Der Spielstand wird beim Entfernen nicht zurückgesetzt.
   - Das Tool sagt „Mitspieler“ statt „Partnerin“ (Wunsch des Users).
   - Dabei gefunden: Die Voreinstellung „DERO“ wurde nach dem Neustart als „Eigene“ angezeigt, weil gespeicherte Einstellungen sortierte Schlüssel haben. `eq` vergleicht jetzt unabhängig von der Reihenfolge.
+- Git-Historie bereinigt (Wunsch des Users): keine Hinweise auf KI-Werkzeuge in Commits und Dateien, die Anleitung für Agenten heißt jetzt `AGENTS.md`. Commit-IDs und Tags wurden dabei neu geschrieben (Force-Push), die Releases blieben erhalten.
 
 ## Nächster Schritt
 
