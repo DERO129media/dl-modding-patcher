@@ -7,7 +7,8 @@ Bei Klärung hier abhaken und das Ergebnis in die passende Doku übernehmen.
 - [ ] **`AlternativePrice`**: Ist das der Upgrade-Preis beim Craftmaster oder ein alternativer Craft-Preis?
 - [ ] **Loot-Semantik**: Wie wirken `LootAmount(n)` und `use X (min_amount, max_amount)` zusammen? Ist die Vorschau im Prototyp (`use.min × ItemCount.min`) richtig?
 - [ ] **`PermaWorld()`** in `lootsets_ft.loot`: Zu welchem Modus gehört der zweite `ItemCount`?
-- [ ] **Schwierigkeits-Varianten**: Welche von `player_variables(_easy|_hard|_nightmare|_new_jumps)` und `perma_world/` greift wann? Überschreiben sie Einzelwerte oder die ganze Datei?
+- [ ] **Schwierigkeits-Varianten**: Teilweise geklärt: `_easy`/`_hard`/`_nightmare` überschreiben nur Einzelwerte über `main()` (siehe spieldaten.md). Offen bleibt, wofür `_new_jumps` (vollständige Kopie, nirgends referenziert) und `perma_world/` genutzt werden.
+- [ ] **Kandidaten aus „Weitere Stellschrauben“** (spieldaten.md) im Spiel testen, bevor sie ins Tool kommen: Wirkt z. B. `CommonCraftDroppedMul` auch außerhalb von Leicht?
 - [ ] **Grenze bei den Pak-Nummern**: Werden wirklich nur `data2` bis `data7` geladen, und gewinnt die höhere Nummer? Bisher nur laut Community.
 - [ ] **Was prüft der Koop-Abgleich genau?** Die ganze Pak-Datei oder den Inhalt?
 - [ ] **Stapelgrößen von Materialien**: Wo stehen die `Item("Craft_Blades")`-Definitionen? Sie sind nicht in `inventory*.scr` unter diesem Namen zu finden.

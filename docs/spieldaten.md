@@ -116,6 +116,34 @@ LootedObject("Dismantle_T2_Slash")
 - `Inventory*MaxStackCount` gilt laut Kommentar nur bei `InventoryUpgradeEnabled=true`, und das steht auf false. Die Stapelgröße kommt daher aus `MaxStackCount` am Item.
 - Beispiele: Ausdauerkosten beim Gleiten, Schwimmen und Bogen, Nacht-XP (`NightExp*`), Parkour in der Wut (`AdvancedParkourFury*`), Taschenlampe.
 
+### Schwierigkeits-Varianten (aus dem Code gelesen)
+
+`player_variables_easy.scr` usw. importieren `player_variables.scr` und überschreiben nur einzelne Werte:
+`sub PlayerVariables() { use main(); use main_easy(); }`. Ein Wert, der in `main()` gepatcht wird, gilt also in allen Schwierigkeiten, **außer** eine Variante überschreibt ihn. Dann muss die Variante mitgepatcht werden.
+`player_variables_new_jumps.scr` ist eine vollständige eigene Kopie mit 2.239 Params und wird von keinem Skript referenziert. Ob die Engine sie nutzt, ist unklar. Vorsichtshalber mitpatchen.
+
+## Weitere Stellschrauben (Kandidaten, Stand 2026-09-27)
+
+Alles einzelne Zahlen in klaren Zeilen, gleiches Muster wie die verifizierten Wurfmesser. Die Wirkung im Spiel ist **angenommen**, bis sie getestet ist.
+
+| Bereich | Datei | Werte (Original) |
+|---|---|---|
+| Waffen aufwerten | `inventory/weaponenhancmentcosts.scr` | `BaseCost`/`PerRankCost` je Waffentyp × Seltenheit, z. B. Blunt Weiß 20 Teile + 5 Stoff, +2 Teile pro Rang |
+| Todesstrafe | `player_variables.scr` | `DeathPenaltyXpLossPercentageLevel1..14` (0,5–1,5 %), `DeathPenaltyXpLossMultiplierDay/Night` 1,0/1,3, `LLDeathPenalty*`. Leicht setzt 0, Schwer 1,3/1,5 |
+| Material-Drop-Bonus | `player_variables.scr` | `CommonCraftDroppedMul`/`UncommonCraftDroppedMul` 0,0, auf Leicht 0,25 („adds on top“) |
+| XP | `player_variables.scr`, `progression/progressionactions.scr` | `ActionsXPMultiplier` 1,0, `NightXPBonus` 1,0, `NightExp*Reward`, `LegendBonus_Coop(2..4, 1.0)`, `LegendBonus_Difficulty` |
+| Ausdauer | `player_variables.scr` | `MaxStaminaMultiplier` 1,0, `StaminaRegenerationMul` 1,0 (Schwer 0,85), Kosten für Gleiten 0,25/Nacht 0,3, Schwimmen 0,075, Bogen 0,375 |
+| Wut (Fury) | `player_variables.scr`, `player/player_fury_config.scr` | `FuryMaxPoints` 100, `FuryChargeMultiplier` 1,0, `FuryChargedTime` 10, `ActionCost(...)` je Fury-Aktion |
+| Hunger | `player/player_hunger_config.scr` | `ActionCost(...)` 0–1,0 je Aktion |
+| Antizin | `player_variables.scr` | `AntizinNightDuration` 350, `AntizinDarkZoneDuration` 350, `PlayersAntizinCapacity` 0,8 |
+| Heilung | `healingdefinitions.scr` | `HealingHps("MedkitRegen")`, `HealthRegenerationPotion_Upgrade*`, `MedkitInstant` … |
+| Reparatur | `player_variables.scr` | `PerfectRepairChance` 0,0, `MeleeWpnDurabilityMulReduce` 2,0 (Leicht 1,33) |
+| Umskillen | `progression/legendlevelconfig.scr` | `Respec { CostCash(5000); }` |
+| Friendly Fire | `player_variables.scr` | `FriendlyFireMultiplier` 0,05 (Leicht 0, Schwer 0,1, Albtraum 0,2) |
+| Stapelgrößen | `inventory/inventory.scr` | `MaxStackCount(n)` an 369 Items |
+
+**Bewusst nicht anfassen** (Risiko für Stabilität/Koop): Tageszeiten (`daytime.def`: laut Kommentar an KI, Sound und viele andere Dateien gekoppelt), Sprung- und Parkour-Physik, Gegner-Spawns und Dichte, `gameconfig/`, `savegame/`, `versioning/`, Quests und Story.
+
 ## Sonstiges
 
 - Reparaturen: `scripts/inventory/inventory_special.scr` enthält `MaxRepairCountByRarity(Color_X, n)`: Weiß 2, Grün 2, Blau 4, Lila 5, Orange 7.
