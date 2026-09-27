@@ -9,6 +9,8 @@ Patcher für **Dying Light: The Beast**: Crafting, Loot, Zerlegen, Händler und 
 - „Mod entfernen“ heißt: diese eine Datei löschen.
 - **Koop:** Host und Gast brauchen byte-gleiche Paks. Deshalb schreibt der Patcher einen festen Zeitstempel ins ZIP und zeigt einen Mod-Code (MD5-Auszug) zum Vergleichen an.
 
+Ausführliche Doku in [`docs/`](docs/) – Einstieg für KI-Assistenten: [`AGENTS.md`](AGENTS.md).
+
 ## Wichtige Spieldateien
 
 | Bereich | Datei in `data0.pak` |

@@ -1,0 +1,15 @@
+# Verlauf
+
+## 2026-09-27
+
+- Spielordner untersucht: Die `.pak` sind ZIPs, das Wurfmesser-Rezept steht in `collectables_ft.scr`.
+- **v1 gebaut** (damals „DeRo-Wurfmesser-Patcher“ in `Dokumente\`, dann umbenannt in **DERO-WurfPatcher**): Wurfmesser kosten 1 statt 3 Drähte, liefern 5 statt 2 Stück, Kopfschuss ×3,0.
+- Der User hat gepatcht, danach scheiterte Koop mit „Spieldaten unterschiedlich“. **Fix:** fester ZIP-Zeitstempel und Mod-Code. Danach lief Koop mit der Koop-Partnerin. Die Werte kommen im Spiel an (1 Draht, 5 Stück).
+- Spielstand-Bearbeitung und Live-Trainer wurden besprochen und verworfen. Entscheidung: **Regeln ändern, nicht Bestände.**
+- Recherche für v2: Loot, Zerlegen, Händler, Inventar sowie das Lokalisierungsformat geknackt.
+- **UI-Prototyp** gebaut, der User findet ihn gut („sieht doch schon ordentlich aus“).
+- Repo angelegt: `Desktop\code\dl-modding-patcher`, erster Commit.
+
+## Nächster Schritt
+
+Den Prototyp mit dem Patcher verbinden. Die C#-`.exe` hostet die HTML-UI, der Katalog von Einstellungen liegt im Code, und der Parser aus `tools/extract_data.py` wird nach C# portiert.
