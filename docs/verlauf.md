@@ -11,6 +11,7 @@
 - Repo angelegt: `Desktop\code\dl-modding-patcher`, erster Commit.
 - Alle 1.882 Skripte nach weiteren Stellschrauben durchsucht (Liste in spieldaten.md). Die Schwierigkeitsgrade überschreiben nur Einzelwerte.
 - Wunsch des Users: spielweite Einstellungen in einem eigenen Bereich **Global** bündeln. Im Prototyp umgesetzt mit 34 Einstellungen. „Inventar“ ist darin aufgegangen.
+- UX/UI-Review per Subagent durchgeführt. Alle Befunde umgesetzt, siehe architektur.md → „UX-Entscheidungen“. Außerdem liefert der Extraktor jetzt den vollständigen Inhalt der Material-Bündel mit deutschen Namen.
 
 ## Nächster Schritt
 

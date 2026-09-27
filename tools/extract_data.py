@@ -104,11 +104,25 @@ def first_itemcount(sub):
     ic = re.search(r'ItemCount\("([^"]+)",\s*(\d+),\s*(\d+)', m.group(1))
     return ic and (ic.group(1), int(ic.group(2)), int(ic.group(3)))
 
+def all_itemcounts(sub):
+    """Alle ItemCount-Eintraege vor PermaWorld() (= normales Spiel)."""
+    m = re.search(r"sub " + re.escape(sub) + r"\(.*?\{(.*?)\n\s*\}\s*\n\s*\}", sets, re.S)
+    body = m.group(1).split("PermaWorld()")[0] if m else ""
+    found = [(i, int(a), int(b)) for i, a, b in re.findall(r'ItemCount\("([^"]+)",\s*(\d+),\s*(\d+)', body)]
+    return list(dict.fromkeys(found))  # doppelte Eintraege (mehrere Sets) nur einmal
+
+BUNDLES = {"Mechanical": "Mechanik-Bündel", "General": "Allgemeines Bündel", "Chemical": "Chemie-Bündel",
+           "Vanity": "Stoff-Bündel", "Electrical": "Elektrik-Bündel", "Apex_Rare": "Apex-Beute (selten)",
+           "Apex_Uncommon": "Apex-Beute (ungewöhnlich)"}
 loot = []
 for sub in re.findall(r"sub (\w+_FT)\(", sets):
     ic = first_itemcount(sub)
     if ic and ic[0].startswith("Craft_"):
-        loot.append({"id": sub, "item": ic[0], "name": mat_name(ic[0]), "min": ic[1], "max": ic[2]})
+        parts = [{"item": i, "name": mat_name(i), "min": a, "max": b} for i, a, b in all_itemcounts(sub)]
+        key = sub.replace("_Craftparts_FT", "")
+        e = {"id": sub, "item": ic[0], "name": mat_name(ic[0]), "min": ic[1], "max": ic[2], "parts": parts}
+        if "_Craftparts_" in sub: e["bundle"] = BUNDLES.get(key, key.replace("_", " "))
+        loot.append(e)
 money = []
 for sub, label in (("Money_Low", "Kleiner Fund"), ("Money_Mid", "Mittlerer Fund"), ("Money_High", "Großer Fund")):
     ic = first_itemcount(sub)
@@ -246,7 +260,7 @@ glob = [
     {"id": "mat", "chip": "gear", "title": "Material-Bonus", "hint": "Eingebauter Bonus auf gefundenes Crafting-Material. Im Original nur auf „Leicht“ aktiv (+25 %).", "items": [
         # Common/Uncommon: welche Materialien gemeint sind, ist ungeklaert -> ein Regler fuer beide
         G("CraftDropped", "Mehr Material beim Plündern", pvv("CommonCraftDroppedMul")["Normal"], fmt="plus", mode="add",
-          sub="Zusätzlich zu den Loot-Reglern", min=0, max=2, step=0.25, diff=diff_note("CommonCraftDroppedMul"),
+          sub="Wirkt zusätzlich zu den Reglern unter „Loot“", min=0, max=2, step=0.25, diff=diff_note("CommonCraftDroppedMul"),
           params=["CommonCraftDroppedMul", "UncommonCraftDroppedMul"]),
     ]},
     {"id": "repair", "chip": "gear", "title": "Reparatur & Haltbarkeit", "hint": "Wie schnell Waffen verschleißen und wie oft du sie reparieren kannst.", "items": [
@@ -260,7 +274,8 @@ glob = [
     {"id": "inv", "chip": "gear", "title": "Inventar", "hint": "Plätze im Rucksack und Lager, und wie viel auf einen Platz passt.", "items":
         [G(k, l, int(PV(k)), ctl="step", fmt="n", mode="set", group="Plätze", min=1, max=999, step=1) for k, l in SLOTS] +
         [G(i, l, stack(cats[0])[0], ctl="step", fmt="n", mode="set", group="Stapelgröße",
-           sub="%d Items" % sum(stack_cnt.get(c, {}).get(stack(cats[0])[0], 0) for c in cats),
+           sub=(lambda n: "gilt für %d Gegenstände" % n if n != 1 else "gilt für 1 Gegenstand")(
+               sum(stack_cnt.get(c, {}).get(stack(cats[0])[0], 0) for c in cats)),
            min=1, max=9999, step=1 if stack(cats[0])[0] < 100 else 10, files=["inventory*.scr"], cats=list(cats))
          for i, l, cats in STACKS]},
 ]
