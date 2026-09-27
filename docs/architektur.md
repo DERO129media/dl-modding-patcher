@@ -102,6 +102,10 @@ Eine `.exe` ohne Installation, gebaut mit `csc.exe` aus .NET Framework 4 (C# 5).
   - Pak mit v2.0.1-Einstellungen (Munition 150, XP ×2, DERO-Wurfmesser): XP und Wurfmesser bleiben, Munition wird 100, der Hinweis erscheint. Nach dem Patchen: „✓ so installiert“.
   - Regression unverändert: 34 × Min/Max ohne Fehler, „alles gleichzeitig“ `A6B4-A805`, DERO `ECC4-CE33`.
   - Nicht getestet: der Wettlauf mit einem anderen Programm während `File.Replace` und der Fehlerfall 1177 (beides nur im Code nachvollzogen), FAT32.
+- **v2.2.0, neue Voreinstellung DERO** (Einstellung des Users, aus der installierten `data2.pak` des Users gelesen):
+  - `--selftest … dero` ergibt `0217-2D9D` und ist byte-gleich mit der Pak, die der User mit v2.1.1 in der Oberfläche gepatcht hat. `PRESETS.dero` (UI) und `Program.DeroDiff` ergeben also denselben Diff.
+  - Dev-Server mit dieser Pak: Die Oberfläche zeigt „DERO“ als aktive Voreinstellung und „✓ so installiert“.
+  - Der alte DERO-Code `ECC4-CE33` (nur Wurfmesser) gilt ab v2.2.0 nicht mehr als Regressionswert.
 - **UI im Dev-Modus gegen die Spielkopie:**
   - v1-Mod erkannt.
   - Patchen ersetzt `data2.pak`.

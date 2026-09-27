@@ -16,7 +16,7 @@ using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("DERO-Patcher")]
 [assembly: System.Reflection.AssemblyProduct("DERO-Patcher")]
-[assembly: System.Reflection.AssemblyVersion("2.1.1.0")]
+[assembly: System.Reflection.AssemblyVersion("2.2.0.0")]
 
 namespace Dero
 {
@@ -241,14 +241,34 @@ namespace Dero
             return 0;
         }
 
-        // DERO-Voreinstellung: Wurfmesser 1 Draht, 5 Stueck, Kopfschuss x3 (wie in der Oberflaeche)
+        // DERO-Voreinstellung, muss denselben Diff ergeben wie PRESETS.dero in der Oberflaeche (sonst weicht der Mod-Code ab)
+        const string Knife = "Craftplan_ThrowingKnives_FT", Arrows = "Craftplan_Arrows_FT";
+        static readonly Dictionary<string, int> DeroOut = new Dictionary<string, int> {
+            { Knife, 5 }, { "Craftplan_ThrowingKnives_Bleed_FT", 5 }, { "Craftplan_ThrowingKnives_Shock_FT", 5 },
+            { "Craftplan_ThrowingKnives_Exlpoding_FT", 5 }, { "Craftplan_Throwable_InfectingKnifeAGen_FT", 5 },
+            { Arrows, 12 }, { "Craftplan_Arrows_Fire_FT", 8 }, { "Craftplan_Arrows_Shock_FT", 8 },
+            { "Craftplan_Car_Repair_Kit_FT", 3 }, { "Craftplan_Grenade_FT", 2 }, { "Craftplan_Molotov_FT", 2 } };
+
         public static Dictionary<string, object> DeroDiff(GameModel m)
         {
-            Family f = m.FamById["Craftplan_ThrowingKnives_FT"];
-            var tiers = f.Tiers.Select(t => (object)Json.O(
-                "mats", t.Mats.Select(x => (object)(x.Key.IndexOf("wiring", StringComparison.OrdinalIgnoreCase) >= 0 ? 1 : x.Value)).ToList(),
-                "out", 5, "head", 3)).ToList();
-            return Json.O("craft", Json.O(f.Id, tiers));
+            var craft = new Dictionary<string, object>();
+            foreach (Family f in m.Families)
+            {
+                int outN;
+                if (!DeroOut.TryGetValue(f.Id, out outN)) continue;
+                string id = f.Id;
+                craft[id] = f.Tiers.Select(t => (object)new Dictionary<string, object> {
+                    { "head", id == Knife ? (object)3 : t.Head.HasValue ? (object)t.Head.Value : null },
+                    // Wurfmesser: Draht auf 1; Pfeile: Material halbiert (aufgerundet, mindestens 1)
+                    { "mats", t.Mats.Select(x => (object)(id == Knife && x.Key.IndexOf("wiring", StringComparison.OrdinalIgnoreCase) >= 0 ? 1
+                        : id == Arrows ? Math.Max(1, (x.Value + 1) / 2) : x.Value)).ToList() },
+                    { "out", outN } }).ToList();
+            }
+            return Json.O("craft", craft,
+                "glob", Json.O("CraftDropped", 0.25, "FuryChargeMultiplier", 1.25),
+                "loot", Json.O("Wiring_FT", 2, "Rags_FT", 1.5, "Blades_FT", 2, "Feathers_FT", 2, "Vanity_Craftparts_FT", 1.5),
+                "money", Json.O("Money_Low", 1.5, "Money_Mid", 1.5, "Money_High", 1.5),
+                "dis", Json.O("Craft_Blades", 1.5));
         }
 
         // Exit 0 = ok, 1 = Fehler (siehe .log), 3 = Ziel liegt im echten Spielordner oder ist nicht pruefbar (nichts geschrieben)

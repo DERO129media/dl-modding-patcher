@@ -2,6 +2,17 @@
 
 Jeder Abschnitt `## vX.Y.Z` wird beim Release automatisch als Text übernommen und im Tool unter „Update verfügbar“ angezeigt.
 
+## v2.2.0
+
+- **Neue Voreinstellung „DERO“:** die Einstellung des Entwicklers. Wurfmesser, Pfeile, Granaten, Molotows und Autoreparatursets ergiebiger, Pfeile günstiger, mehr Loot und mehr Klingen beim Zerlegen, schnellere Wut im Beast-Modus.
+- Werte für andere Schwierigkeitsgrade stehen jetzt als kleine Kästchen unter der Einstellung.
+- Kommawerte werden genau angezeigt (z. B. ×1,25 statt gerundet ×1,3).
+- Der Hinweis oben bei einer alten oder veralteten Mod ist weg. Das steht weiter links im Status und unten bei „noch nicht gepatcht“.
+- Der Knopf heißt jetzt „Teilen / Übernehmen“, weil man dort auch Codes von Mitspielern einfügt.
+- Status unten links aufgeräumt.
+
+**Koop:** Wer die Voreinstellung „DERO“ nutzt, bekommt neue Werte und damit einen neuen Mod-Code. Bitte beide updaten und neu patchen. Eigene Einstellungen behalten ihren Mod-Code.
+
 ## v2.1.1
 
 - Die Voreinstellung „DERO“ wird nach einem Neustart wieder richtig erkannt (vorher stand dort „Eigene“).

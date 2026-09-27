@@ -44,7 +44,8 @@ nav { padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; }
 .nav.active { color: var(--text); background: var(--panel2); }
 .nav.active::before { content: ""; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); box-shadow: 0 0 12px var(--glow); }
 .nav .badge { margin-left: auto; min-width: 22px; padding: 3px 7px; border-radius: 99px; background: var(--accent); color: #1a0d04; font: 700 12px/1 var(--fd); text-align: center; letter-spacing: 0; }
-.status { margin-top: auto; padding: 16px 18px 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); display: grid; gap: 12px; }
+.status { margin-top: auto; padding: 16px 18px 16px; font-size: 12px; color: var(--muted); display: grid; gap: 12px; }
+.status .foot { display: grid; gap: 10px; margin: 2px -18px 0; padding: 12px 18px 0; border-top: 1px solid var(--line); }
 .status .row { display: flex; gap: 9px; align-items: flex-start; }
 .status .dot { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--good); box-shadow: 0 0 8px var(--good); flex: none; }
 .status .dot.mod { background: var(--accent); box-shadow: 0 0 8px var(--glow); }
@@ -133,7 +134,9 @@ header p { margin: 8px 0 0; color: var(--muted); max-width: 640px; }
 .srow { display: grid; grid-template-columns: minmax(170px, 1fr) minmax(120px, auto) minmax(160px, 1.6fr) 70px 24px; align-items: center; gap: 14px; padding: 9px 0; border-top: 1px solid var(--line); }
 .panel > .srow:first-of-type { border-top: 0; }
 .srow .n small { display: block; color: var(--dim); font-size: 12px; }
-.srow .n small.df { color: var(--uv); }
+.srow .n small.df { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.dfb { padding: 2px 6px; border: 1px solid rgba(168,141,255,.35); border-radius: 5px; background: rgba(168,141,255,.08); color: var(--uv); font-size: 11px; line-height: 1.3; white-space: nowrap; }
+.dfb b { font-weight: 600; }
 .srow .n small.sub b { color: var(--accent2); font-weight: 600; }
 .srow .vals { font: 600 15px/1 var(--fd); letter-spacing: .02em; white-space: nowrap; }
 .srow .vals .o { color: var(--dim); }
@@ -322,14 +325,14 @@ table.mx { width: 100%; border-collapse: separate; border-spacing: 0; }
       <div class="what"><b>Geändert</b><span id="what">Noch alles original</span></div>
       <div class="sp"></div>
       <div class="modc" id="modc" title="Für Koop müssen beide Spieler denselben Mod-Code haben."></div>
-      <button class="btn" id="btnShare"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Teilen</button>
+      <button class="btn" id="btnShare"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Teilen / Übernehmen</button>
       <button class="btn primary" id="btnPatch"><span>Patchen</span></button>
     </div>
   </main>
 </div>
 
 <div class="modal" id="mShare"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
-  <h3 id="shareTitle">Einstellungen teilen</h3>
+  <h3 id="shareTitle">Teilen / Übernehmen</h3>
   <p>Für Koop braucht ihr exakt dieselben Werte. Schick deinen Code an deine Mitspieler. Sie fügen ihn bei sich unter „Code übernehmen“ ein.</p>
   <span class="lbl">Dein Code</span>
   <div class="code"><input id="shareOut" readonly aria-label="Dein Teilen-Code"><button class="btn" id="btnCopy">Kopieren</button></div>
@@ -471,12 +474,21 @@ function original() {
 const ORIG = original();
 const PRESETS = {
   original: () => clone(ORIG),
+  // Muss denselben Diff ergeben wie Program.DeroDiff (Selbsttest)
   dero: () => {
-    const s = clone(ORIG), f = FAM[KNIFE];
-    s.craft[f.id].forEach((t, i) => {
-      f.tiers[i].mats.forEach((m, j) => { if (/wiring/i.test(m[0])) t.mats[j] = 1; });
-      t.out = 5; t.head = 3;
-    });
+    const s = clone(ORIG), put = (o, v) => { for (const k in v) if (k in o) o[k] = v[k]; };
+    const craft = (ids, f) => ids.forEach(id => s.craft[id] && s.craft[id].forEach((t, i) => f(t, FAM[id].tiers[i])));
+    craft([KNIFE], (t, o) => { o.mats.forEach((m, j) => { if (/wiring/i.test(m[0])) t.mats[j] = 1; }); t.out = 5; t.head = 3; });
+    craft(["Craftplan_ThrowingKnives_Bleed_FT", "Craftplan_ThrowingKnives_Shock_FT", "Craftplan_ThrowingKnives_Exlpoding_FT",
+      "Craftplan_Throwable_InfectingKnifeAGen_FT"], t => { t.out = 5; });
+    craft(["Craftplan_Arrows_FT"], t => { t.mats = t.mats.map(v => Math.max(1, Math.ceil(v / 2))); t.out = 12; });
+    craft(["Craftplan_Arrows_Fire_FT", "Craftplan_Arrows_Shock_FT"], t => { t.out = 8; });
+    craft(["Craftplan_Car_Repair_Kit_FT"], t => { t.out = 3; });
+    craft(["Craftplan_Grenade_FT", "Craftplan_Molotov_FT"], t => { t.out = 2; });
+    put(s.glob, { CraftDropped: 0.25, FuryChargeMultiplier: 1.25 });
+    put(s.loot, { Wiring_FT: 2, Rags_FT: 1.5, Blades_FT: 2, Feathers_FT: 2, Vanity_Craftparts_FT: 1.5 });
+    put(s.money, { Money_Low: 1.5, Money_Mid: 1.5, Money_High: 1.5 });
+    put(s.dis, { Craft_Blades: 1.5 });
     return s;
   },
   big: () => {
@@ -499,7 +511,7 @@ const PRESETS = {
 };
 const PRESET_INFO = {
   original: ["Original", "Alles wie im Spiel."],
-  dero: ["DERO", "Die Einstellung des Entwicklers: Wurfmesser kosten 1 Draht, geben 5 Stück, Kopfschuss ×3."],
+  dero: ["DERO", "Die Einstellung des Entwicklers."],
   big: ["Großzügig", "Halbe Rezeptkosten, doppelter Output und Loot, bessere Händlerpreise, mehr Platz, leichteres Überleben."],
 };
 
@@ -562,7 +574,8 @@ const prevInfo = (changed, text) => changed ? `<span class="orig">vorher ${text}
 // Jede Regler-Zeile wird aus einem Modell gebaut. Beim Ziehen wird nur die Zeile aktualisiert.
 const DIFF_ORDER = ["Leicht", "Schwer", "Albtraum"];
 function gfmt(i, v) {
-  const d = i.step < 0.1 ? 2 : 1;
+  // Eine Nachkommastelle, zwei nur wenn nötig (×1,25 darf nicht als ×1,3 erscheinen)
+  const d = Math.abs(v * 10 - Math.round(v * 10)) < 1e-9 ? 1 : 2;
   switch (i.fmt) {
     case "x": return "×" + de(v, d);
     case "pct": return de(v * 100) + " %";
@@ -576,8 +589,7 @@ function gdiff(i, v) {
   if (!i.diff) return "";
   const o = i.value, n = i.diff.Normal;
   const conv = d => i.mode === "add" ? d + (v - o) : i.fmt === "pct" && o === 1 ? (d / n) * v : o ? d * v / o : d;
-  const parts = DIFF_ORDER.filter(k => k in i.diff).map(k => `${k} ${gfmt(i, conv(i.diff[k]))}`);
-  return parts.length ? "Andere Schwierigkeiten: " + parts.join(" · ") : "";
+  return DIFF_ORDER.filter(k => k in i.diff).map(k => `<span class="dfb">${k}: <b>${gfmt(i, conv(i.diff[k]))}</b></span>`).join("");
 }
 function rowModel(path) {
   const [k, id] = path.split("|");
@@ -612,7 +624,7 @@ function rowModel(path) {
 function srow(path, tag = "") {
   const m = rowModel(path);
   return `<div class="srow${m.ch ? " ch" : ""}" data-row="${path}">
-    <div class="n"><div>${esc(m.label)}${tag}${m.sub ? `<small class="sub">${m.sub}</small>` : ""}${m.df ? `<small class="df">${m.df}</small>` : ""}</div></div>
+    <div class="n"><div>${esc(m.label)}${tag}${m.sub ? `<small class="sub">${m.sub}</small>` : ""}${m.df ? `<small class="df" title="Werte in den anderen Schwierigkeitsgraden">${m.df}</small>` : ""}</div></div>
     <div class="vals">${m.info}</div>
     ${slider(path, m.v, m.min, m.max, m.step, m.o, m.label)}
     <div class="mult">${m.value}</div>
@@ -626,7 +638,7 @@ function patchRow(row) {
   row.querySelector(".mult").innerHTML = m.value;
   const sub = row.querySelector("small.sub"), df = row.querySelector("small.df");
   if (sub) sub.innerHTML = m.sub;
-  if (df) df.textContent = m.df;
+  if (df) df.innerHTML = m.df;
   row.querySelector(".rst").hidden = !m.ch;
 }
 const panel = (title, hint, body, changed) =>
@@ -776,12 +788,7 @@ function banners() {
   else if (FIXES.length) b.push(`<div class="banner warn"><span class="ic">!</span><div><b>Gespeicherte Einstellungen angepasst</b> – ${FIXES.length === 1 ? "ein Wert passte" : FIXES.length + " Werte passten"} nicht zu den Grenzen dieser Version:
     ${esc(FIXES.slice(0, 4).join(" · "))}${FIXES.length > 4 ? " …" : ""}. Bitte prüfen und neu patchen (im Koop beide).</div>
     <button class="btn" data-patch-now="1">Jetzt patchen</button></div>`);
-  else if (installed && (installed.legacy || installed.outdated)) {
-    const why = installed.legacy ? `<b>Alte Version installiert</b> – ${esc(installed.pak)} stammt noch vom WurfPatcher v1.`
-      : `<b>Mod ist veraltet</b> – das Spiel wurde seit dem letzten Patchen aktualisiert.`;
-    b.push(`<div class="banner warn"><span class="ic">!</span><div>${why} Einmal neu patchen, dann passt alles (im Koop beide).</div>
-      <button class="btn" data-patch-now="1">Jetzt patchen</button></div>`);
-  }
+  // Alte Version / veraltet: kein Banner, das steht links im Status und unten bei „noch nicht gepatcht“
   if (LIVE && SERVER.conflicts && SERVER.conflicts.length) b.push(`<div class="banner warn"><span class="ic">!</span><div><b>Anderer Mod gefunden:</b> ${esc(SERVER.conflicts.join(", "))} ändert dieselben Spieldateien. Die Mods überschreiben sich gegenseitig.</div></div>`);
   return b.join("");
 }
@@ -795,7 +802,7 @@ function renderChrome() {
   const active = activePreset();
   $("#presets").innerHTML = Object.keys(PRESETS).map(k => `<button class="${k === active ? "on" : ""}" data-preset="${k}" aria-pressed="${k === active}" title="${esc(PRESET_INFO[k][1])}">${PRESET_INFO[k][0]}</button>`).join("")
     + (active ? "" : `<span class="custom">Eigene</span>`);
-  $("#pdesc").textContent = active ? PRESET_INFO[active][1] : "Eigene Einstellungen – mit „Teilen“ an deine Mitspieler schicken.";
+  $("#pdesc").textContent = active ? PRESET_INFO[active][1] : "Eigene Einstellungen – mit „Teilen / Übernehmen“ an deine Mitspieler schicken.";
   $("#count").textContent = n;
   $("#count").classList.toggle("zero", !n);
   $("#what").textContent = n ? summary(c) : "Noch alles original";
@@ -809,11 +816,11 @@ function renderChrome() {
     + (installed && installed.foreign
       ? `<div class="row"><div class="dot mod"></div><div><b>Unbekannter Inhalt · ${esc(installed.pak)}</b><span class="warn">Wird nicht angefasst.</span></div></div>`
       : installed
-      ? `<div class="row"><div class="dot mod"></div><div><b>${installed.legacy ? "Alte Version" : "Mod aktiv"} · ${esc(installed.pak)}</b>${installed.legacy || installed.outdated
-          ? `<span class="warn">Bitte einmal neu patchen.</span>` : `Mod-Code ${esc(installed.code || "")}`}<br><button class="linkbtn" id="btnRemove">Mod entfernen</button></div></div>`
+      ? `<div class="row"><div class="dot mod"></div><div><b>${installed.legacy ? "Alte Version" : installed.outdated ? "Mod veraltet" : "Mod aktiv"} · ${esc(installed.pak)}</b>${installed.legacy || installed.outdated
+          ? `<span class="warn">${installed.outdated ? "Spiel wurde aktualisiert. " : ""}Bitte einmal neu patchen.</span>` : `Mod-Code ${esc(installed.code || "")}`}<br><button class="linkbtn" id="btnRemove">Mod entfernen</button></div></div>`
       : `<div class="row"><div class="dot off"></div><div><b>Kein Mod installiert</b>Das Spiel läuft mit Originaldaten.</div></div>`)
-    + `<div class="note">Originaldateien werden nie verändert. Der Mod ist eine eigene Datei, die vorige wird vor jedem Ersetzen gesichert.</div>`
-    + `<div class="ver"><span>Version ${esc(VERSION)}</span>${LIVE ? `<button id="btnCheckUpd">Nach Updates suchen</button>` : ""}</div>`;
+    + `<div class="foot"><div class="note">Originaldateien bleiben unverändert. Die vorige Mod-Datei wird vor jedem Ersetzen gesichert.</div>`
+    + `<div class="ver"><span>Version ${esc(VERSION)}</span>${LIVE ? `<button id="btnCheckUpd">Nach Updates suchen</button>` : ""}</div></div>`;
   $("#banners").innerHTML = banners();
   $("#proto").hidden = LIVE;
 }
