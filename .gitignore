@@ -1,0 +1,15 @@
+# Build-Ausgabe
+dist/
+*.exe
+*.zip
+
+# Aus den Spieldateien erzeugt (nicht einchecken)
+ui/data.js
+extract/
+*.pak
+*.scr
+*.loot
+
+# Sonstiges
+__pycache__/
+*.log

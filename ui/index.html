@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DERO Patcher</title>
+<style>
+:root {
+  --bg: #0a0c0f; --panel: #12161c; --panel2: #181e26; --panel3: #1f2630;
+  --line: #232b35; --line2: #303a47;
+  --text: #ece8e1; --muted: #8a94a3; --dim: #5b6572;
+  --accent: #ff6b1a; --accent2: #ffa057; --glow: rgba(255,107,26,.35); --changed: rgba(255,107,26,.10);
+  --good: #57d17a; --uv: #9b7bff;
+  --r-white: #c9d1d9; --r-green: #57d17a; --r-blue: #4aa3ff; --r-violet: #b07cff; --r-orange: #ff9a3c;
+  --fd: "Bahnschrift", "DIN Alternate", "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  --fb: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--fb); overflow: hidden; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(900px 500px at 12% -10%, rgba(255,107,26,.13), transparent 60%),
+    radial-gradient(700px 500px at 110% 110%, rgba(155,123,255,.07), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px); }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.app { position: relative; z-index: 1; display: grid; grid-template-columns: 236px 1fr; grid-template-rows: 100%; height: 100vh; }
+
+/* ---------- Sidebar ---------- */
+.side { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; border-right: 1px solid var(--line); background: rgba(10,12,15,.72); backdrop-filter: blur(6px); }
+.logo { padding: 22px 22px 18px; border-bottom: 1px solid var(--line); }
+.logo .mark { font: 700 30px/1 var(--fd); letter-spacing: .1em; display: flex; align-items: center; gap: 10px; }
+.logo .mark i { width: 6px; height: 26px; background: var(--accent); transform: skewX(-18deg); box-shadow: 0 0 18px var(--glow); }
+.logo .mark b { font-weight: 700; }
+.logo .mark span { color: var(--accent); }
+.logo .sub { margin-top: 8px; font: 600 11px/1 var(--fd); letter-spacing: .32em; color: var(--muted); text-transform: uppercase; }
+nav { padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; }
+.nav { position: relative; display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 0; border-radius: 8px;
+  background: none; text-align: left; color: var(--muted); font: 600 15px/1 var(--fd); letter-spacing: .06em; text-transform: uppercase; }
+.nav svg { width: 19px; height: 19px; flex: none; stroke: currentColor; }
+.nav:hover { color: var(--text); background: var(--panel); }
+.nav.active { color: var(--text); background: var(--panel2); }
+.nav.active::before { content: ""; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); box-shadow: 0 0 12px var(--glow); }
+.nav .badge { margin-left: auto; min-width: 22px; padding: 3px 7px; border-radius: 99px; background: var(--accent); color: #1a0d04; font: 700 12px/1 var(--fd); text-align: center; letter-spacing: 0; }
+.status { margin-top: auto; padding: 16px 18px 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); display: grid; gap: 10px; }
+.status .row { display: flex; gap: 9px; align-items: flex-start; }
+.status .dot { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--good); box-shadow: 0 0 8px var(--good); flex: none; }
+.status .dot.mod { background: var(--accent); box-shadow: 0 0 8px var(--glow); }
+.status b { display: block; color: var(--text); font-weight: 600; }
+.status code { font: 11px/1.3 Consolas, monospace; color: var(--dim); word-break: break-all; }
+
+/* ---------- Main ---------- */
+.main { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+header { display: flex; align-items: flex-end; gap: 24px; padding: 26px 32px 18px; border-bottom: 1px solid var(--line); }
+header h1 { margin: 0; font: 700 30px/1 var(--fd); letter-spacing: .06em; text-transform: uppercase; }
+header p { margin: 8px 0 0; color: var(--muted); max-width: 620px; }
+.presets { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.presets .lbl { font: 600 11px/1 var(--fd); letter-spacing: .24em; color: var(--dim); text-transform: uppercase; }
+.seg { display: flex; padding: 3px; border: 1px solid var(--line2); border-radius: 9px; background: var(--panel); }
+.seg button { border: 0; background: none; padding: 7px 14px; border-radius: 6px; color: var(--muted); font: 600 13px/1 var(--fd); letter-spacing: .08em; text-transform: uppercase; }
+.seg button:hover { color: var(--text); }
+.seg button.on { background: var(--accent); color: #1a0d04; box-shadow: 0 0 16px var(--glow); }
+.seg .custom { padding: 7px 12px; color: var(--accent2); font: 600 13px/1 var(--fd); letter-spacing: .08em; text-transform: uppercase; }
+.content { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 32px 120px; scrollbar-color: var(--line2) transparent; }
+
+/* ---------- Toolbar / Chips ---------- */
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+.chip { border: 1px solid var(--line2); background: var(--panel); color: var(--muted); padding: 7px 13px; border-radius: 99px; font-size: 13px; }
+.chip:hover { color: var(--text); }
+.chip.on { border-color: var(--accent); color: var(--text); background: var(--changed); }
+.search { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line2); border-radius: 8px; background: var(--panel); min-width: 220px; }
+.search input { border: 0; outline: 0; background: none; width: 100%; }
+.search svg { width: 15px; height: 15px; stroke: var(--dim); flex: none; }
+
+/* ---------- Cards ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+.card { position: relative; background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: 12px; padding: 16px 16px 12px; transition: border-color .15s; }
+.card.changed { border-color: rgba(255,107,26,.55); box-shadow: 0 0 0 1px rgba(255,107,26,.12), 0 8px 30px -12px var(--glow); }
+.card.changed::after { content: "GEÄNDERT"; position: absolute; top: -1px; right: 16px; padding: 3px 8px 4px; border-radius: 0 0 6px 6px; background: var(--accent); color: #1a0d04; font: 700 10px/1 var(--fd); letter-spacing: .14em; }
+.card-h { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.card-h .name { font: 700 18px/1.15 var(--fd); letter-spacing: .03em; }
+.card-h .meta { margin-top: 4px; font-size: 12px; color: var(--dim); }
+.tiers { margin-left: auto; display: flex; gap: 4px; }
+.tier { width: 30px; height: 26px; border: 1px solid var(--line2); border-radius: 6px; background: var(--panel); color: var(--muted); font: 700 12px/1 var(--fd); position: relative; }
+.tier::after { content: ""; position: absolute; left: 7px; right: 7px; bottom: 3px; height: 2px; border-radius: 2px; background: var(--c); opacity: .8; }
+.tier.on { color: var(--text); border-color: var(--c); background: var(--panel3); }
+.rows { display: grid; gap: 7px; }
+.row { display: flex; align-items: center; gap: 10px; min-height: 34px; }
+.row .lab { display: flex; align-items: center; gap: 9px; color: var(--text); }
+.ic { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; background: var(--panel3); color: var(--muted); font: 700 11px/1 var(--fd); }
+.row .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.sep { height: 1px; background: var(--line); margin: 4px 0; }
+.was { font-size: 12px; color: var(--dim); text-decoration: line-through; min-width: 26px; text-align: right; }
+.info { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.pill { font-size: 12px; color: var(--muted); padding: 4px 9px; border-radius: 6px; background: var(--panel3); }
+.pill b { color: var(--text); font-weight: 600; }
+.card-f { display: flex; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 12px; color: var(--muted); }
+.card-f .reset { margin-left: auto; border: 0; background: none; color: var(--dim); font-size: 12px; }
+.card-f .reset:hover { color: var(--accent2); }
+
+/* Toggle */
+.tog { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.tog input { display: none; }
+.tog span { width: 30px; height: 17px; border-radius: 99px; background: var(--line2); position: relative; transition: background .15s; }
+.tog span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--text); transition: transform .15s; }
+.tog input:checked + span { background: var(--accent); }
+.tog input:checked + span::after { transform: translateX(13px); background: #1a0d04; }
+
+/* Stepper */
+.step { display: inline-flex; align-items: stretch; border: 1px solid var(--line2); border-radius: 8px; background: var(--bg); overflow: hidden; }
+.step button { width: 28px; border: 0; background: var(--panel3); color: var(--muted); font-size: 16px; line-height: 1; }
+.step button:hover { color: var(--text); background: var(--line2); }
+.step input { width: 50px; border: 0; outline: 0; background: none; text-align: center; font: 600 16px/1 var(--fd); padding: 6px 0; }
+.step.ch { border-color: var(--accent); background: var(--changed); }
+.step.ch input { color: var(--accent2); }
+
+/* Slider panels */
+.panel { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+.panel h2 { margin: 0 0 4px; font: 700 17px/1.2 var(--fd); letter-spacing: .05em; text-transform: uppercase; }
+.panel .hint { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+.srow { display: grid; grid-template-columns: minmax(150px, 1.1fr) 150px minmax(180px, 1.6fr) 64px; align-items: center; gap: 16px; padding: 9px 0; border-top: 1px solid var(--line); }
+.srow:first-of-type { border-top: 0; }
+.srow .n { display: flex; align-items: center; gap: 10px; }
+.srow .n small { display: block; color: var(--dim); font-size: 11px; }
+.srow .vals { font: 600 15px/1 var(--fd); letter-spacing: .02em; white-space: nowrap; }
+.srow .vals .o { color: var(--dim); }
+.srow:not(.ch) .vals .o, .srow:not(.ch) .vals .arrow { display: none; }
+.srow .vals .arrow { color: var(--dim); margin: 0 6px; }
+.srow .vals .nw { color: var(--text); }
+.srow.ch .vals .nw { color: var(--accent2); }
+.srow .mult { font: 700 16px/1 var(--fd); text-align: right; color: var(--muted); }
+.srow.ch .mult { color: var(--accent); }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: none; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--accent) var(--p, 0%), var(--line2) var(--p, 0%)); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: var(--text); border: 3px solid var(--accent); box-shadow: 0 0 10px var(--glow); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 4px; background: var(--line2); }
+input[type=range]::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--accent); }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--text); border: 3px solid var(--accent); }
+
+/* Matrix */
+table.mx { width: 100%; border-collapse: separate; border-spacing: 0; }
+.mx th { text-align: left; font: 600 12px/1 var(--fd); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); padding: 10px 12px; }
+.mx td { padding: 12px; border-top: 1px solid var(--line); vertical-align: top; }
+.mx td:first-child { font: 700 15px/1.2 var(--fd); letter-spacing: .03em; white-space: nowrap; }
+.mx .part { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); padding: 2px 0; }
+.mx .part b { font: 600 14px/1.2 var(--fd); color: var(--text); white-space: nowrap; }
+.mx .part.ch b { color: var(--accent2); }
+.mx .part.ch s { color: var(--dim); font: 12px var(--fd); margin-right: 5px; }
+
+/* Rarity */
+.rar { width: 10px; height: 10px; border-radius: 3px; background: var(--c); box-shadow: 0 0 8px var(--c); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.irow { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.irow:first-of-type { border-top: 0; }
+.irow .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.example { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--bg); border: 1px dashed var(--line2); color: var(--muted); font-size: 13px; }
+.example b { color: var(--accent2); font: 700 15px var(--fd); }
+
+/* ---------- Action bar ---------- */
+.bar { position: absolute; left: 20px; right: 20px; bottom: 16px; display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 20px;
+  border: 1px solid var(--line2); border-radius: 14px; background: rgba(18,22,28,.86); backdrop-filter: blur(12px); box-shadow: 0 18px 40px -10px rgba(0,0,0,.7); }
+.bar .count { font: 700 26px/1 var(--fd); color: var(--accent); min-width: 30px; }
+.bar .count.zero { color: var(--dim); }
+.bar .what { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.bar .what b { display: block; color: var(--text); font: 600 14px/1.2 var(--fd); letter-spacing: .05em; text-transform: uppercase; }
+.bar .sp { flex: 1; }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line2); background: var(--panel2); padding: 10px 16px; border-radius: 10px; font: 600 14px/1 var(--fd); letter-spacing: .08em; text-transform: uppercase; color: var(--text); }
+.btn:hover { border-color: var(--muted); }
+.btn svg { width: 16px; height: 16px; stroke: currentColor; }
+.btn.primary { position: relative; overflow: hidden; border: 0; padding: 13px 30px; font-size: 17px; letter-spacing: .14em; color: #1a0d04;
+  background: linear-gradient(180deg, #ff8a3d, var(--accent)); box-shadow: 0 0 0 1px rgba(255,160,87,.5) inset, 0 8px 26px -6px var(--glow); }
+.btn.primary::before { content: ""; position: absolute; inset: 0; opacity: 0; transition: opacity .2s;
+  background: repeating-linear-gradient(-45deg, rgba(0,0,0,.14) 0 10px, transparent 10px 20px); }
+.btn.primary:hover::before { opacity: 1; }
+.btn.primary span { position: relative; }
+
+/* ---------- Modal / Toast ---------- */
+.modal { position: fixed; inset: 0; z-index: 10; display: none; place-items: center; background: rgba(4,5,7,.7); backdrop-filter: blur(4px); }
+.modal.open { display: grid; }
+.dlg { width: min(520px, calc(100vw - 32px)); background: var(--panel); border: 1px solid var(--line2); border-radius: 16px; padding: 24px; box-shadow: 0 30px 80px -20px #000; }
+.dlg h3 { margin: 0 0 6px; font: 700 22px/1.1 var(--fd); letter-spacing: .06em; text-transform: uppercase; }
+.dlg p { color: var(--muted); margin: 0 0 16px; }
+.code { display: flex; gap: 8px; }
+.code input { flex: 1; min-width: 0; padding: 11px 12px; border-radius: 9px; border: 1px solid var(--line2); background: var(--bg); font: 13px Consolas, monospace; color: var(--accent2); outline: 0; }
+.dlg .acts { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.steps { display: grid; gap: 10px; margin: 6px 0 4px; }
+.stp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--dim); transition: color .2s; }
+.stp i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line2); display: grid; place-items: center; font-style: normal; font-size: 11px; }
+.stp.run { color: var(--text); }
+.stp.run i { border-color: var(--accent); border-top-color: transparent; animation: spin .7s linear infinite; }
+.stp.done { color: var(--text); }
+.stp.done i { border-color: var(--good); background: var(--good); color: #062; }
+.stp .files { flex-basis: 100%; padding-left: 32px; color: var(--dim); font-size: 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.result { display: none; margin-top: 18px; padding: 16px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line2); text-align: center; }
+.result.show { display: block; }
+.result .big { font: 700 30px/1 var(--fd); letter-spacing: .12em; color: var(--accent); margin: 6px 0; }
+.result small { color: var(--muted); }
+.toast { position: fixed; left: 50%; top: 22px; z-index: 20; transform: translate(-50%, -30px); opacity: 0; transition: all .25s; padding: 10px 16px; border-radius: 10px; background: var(--panel3); border: 1px solid var(--line2); font-size: 13px; }
+.toast.show { transform: translate(-50%, 0); opacity: 1; }
+.proto { display: inline-block; margin-top: 12px; font: 700 10px/1 var(--fd); letter-spacing: .2em; color: var(--uv); border: 1px solid rgba(155,123,255,.4); padding: 5px 8px; border-radius: 6px; background: rgba(155,123,255,.08); }
+.empty { color: var(--dim); padding: 40px; text-align: center; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .side { display: none; }
+  header { flex-wrap: wrap; padding: 18px 16px; }
+  .presets { margin-left: 0; align-items: flex-start; }
+  .content { padding: 16px 16px 130px; }
+  .srow { grid-template-columns: 1fr auto; }
+  .srow input[type=range] { grid-column: 1 / -1; }
+  .two { grid-template-columns: 1fr; }
+  .bar { left: 10px; right: 10px; flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="logo">
+      <div class="mark"><i></i><b>DER<span>O</span></b></div>
+      <div class="sub">Patcher · The Beast</div>
+      <div class="proto">PROTOTYP</div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="status">
+      <div class="row"><div class="dot"></div><div><b>Spiel gefunden</b><code>…\steamapps\common\Dying Light The Beast</code></div></div>
+      <div class="row"><div class="dot mod"></div><div><b>Mod aktiv · data2.pak</b>Originaldaten bleiben unverändert</div></div>
+    </div>
+  </aside>
+  <main class="main">
+    <header>
+      <div><h1 id="title"></h1><p id="desc"></p></div>
+      <div class="presets"><div class="lbl">Voreinstellung</div><div class="seg" id="presets"></div></div>
+    </header>
+    <div class="content" id="content"></div>
+    <div class="bar">
+      <div class="count" id="count">0</div>
+      <div class="what"><b>Änderungen</b><span id="what">Noch alles original</span></div>
+      <div class="sp"></div>
+      <button class="btn" id="btnShare"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Teilen</button>
+      <button class="btn primary" id="btnPatch"><span>Patchen</span></button>
+    </div>
+  </main>
+</div>
+
+<div class="modal" id="mShare"><div class="dlg">
+  <h3>Einstellungen teilen</h3>
+  <p>Schick diesen Code an deine Koop-Partnerin. Sie fügt ihn bei sich ein und hat danach exakt dieselben Werte – und denselben Mod-Code.</p>
+  <div class="code"><input id="shareOut" readonly><button class="btn" id="btnCopy">Kopieren</button></div>
+  <p style="margin:18px 0 8px">Code von jemand anderem übernehmen:</p>
+  <div class="code"><input id="shareIn" placeholder="DERO1.…"><button class="btn" id="btnApply">Übernehmen</button></div>
+  <div class="acts"><button class="btn" data-close>Schließen</button></div>
+</div></div>
+
+<div class="modal" id="mPatch"><div class="dlg">
+  <h3>Patchen</h3>
+  <p>Prototyp – es wird nichts geschrieben. So sieht der Ablauf im fertigen Tool aus.</p>
+  <div class="steps" id="steps"></div>
+  <div class="result" id="result"><small>Mod-Code</small><div class="big" id="modcode"></div><small>Für Koop müssen beide Spieler denselben Code haben.</small></div>
+  <div class="acts"><button class="btn" data-close>Schließen</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+const D = window.DATA;
+const $ = s => document.querySelector(s);
+const clone = o => JSON.parse(JSON.stringify(o));
+const de = (n, d = 0) => n.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const CATS = { wurf: "Wurfwaffen", heil: "Heilung", muni: "Munition", spreng: "Sprengstoff", werkzeug: "Werkzeug" };
+const ICON = {
+  craft: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  loot: '<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  dis: '<path d="M4 20l6-6M14 4l6 6-8 8-6-6z"/><path d="M11 9l4 4"/>',
+  trade: '<circle cx="9" cy="9" r="6"/><path d="M15.5 9.5A6 6 0 1 1 9.5 15.5"/>',
+  inv: '<path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+};
+const SECTIONS = [
+  { id: "craft", label: "Crafting", title: "Crafting", desc: "Rezepte günstiger machen, mehr pro Craft herausholen und Wurfwaffen stärker machen." },
+  { id: "loot", label: "Loot", title: "Loot & Funde", desc: "Wie viel Material und Geld du beim Plündern findest. Der Regler multipliziert die Menge pro Fund." },
+  { id: "dis", label: "Zerlegen", title: "Zerlegen", desc: "Wie viel Material beim Zerlegen von Waffen herauskommt – die beste Quelle für Klingen." },
+  { id: "trade", label: "Händler", title: "Händler", desc: "Wie viel dir Händler zahlen und was Einkäufe kosten." },
+  { id: "inv", label: "Inventar", title: "Inventar", desc: "Mehr Platz im Rucksack und im Lager, häufigere Reparaturen." },
+];
+const TIERC = ["var(--r-white)", "var(--r-green)", "var(--r-blue)", "var(--r-violet)", "var(--r-orange)"];
+const matShort = n => n.slice(0, 2).toUpperCase();
+
+// ---------- Zustand ----------
+const CAT_ORDER = Object.keys(CATS);
+D.crafting.sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) || (a.id === "Craftplan_ThrowingKnives_FT" ? -1 : b.id === "Craftplan_ThrowingKnives_FT" ? 1 : a.name.localeCompare(b.name, "de")));
+const DIS_MATS = [...new Set(D.dismantle.flatMap(x => x.parts.map(p => p.name)))];
+const LOOT_SINGLE = D.loot.filter(l => !/Craftparts/.test(l.id));
+const LOOT_BUNDLE = D.loot.filter(l => /Craftparts/.test(l.id));
+
+function original() {
+  const s = { craft: {}, loot: {}, money: {}, dis: {}, trade: {}, slots: {}, repairs: {} };
+  for (const f of D.crafting) s.craft[f.id] = f.tiers.map(t => ({ mats: t.mats.map(m => m[1]), out: t.out, head: t.head ?? null }));
+  for (const l of D.loot) s.loot[l.id] = 1;
+  for (const m of D.money) s.money[m.id] = 1;
+  for (const m of DIS_MATS) s.dis[m] = 1;
+  for (const t of D.trade.sell) s.trade[t.id] = t.value;
+  s.trade.buy = D.trade.buy;
+  for (const x of D.slots) s.slots[x.id] = x.value;
+  for (const r of D.repairs) s.repairs[r.id] = r.value;
+  return s;
+}
+const ORIG = original();
+const PRESETS = {
+  original: () => clone(ORIG),
+  dero: () => {
+    const s = clone(ORIG);
+    const f = D.crafting.find(f => f.id === "Craftplan_ThrowingKnives_FT");
+    s.craft[f.id].forEach((t, i) => {
+      f.tiers[i].mats.forEach((m, j) => { if (/wiring/i.test(m[0])) t.mats[j] = 1; });
+      t.out = 5; t.head = 3;
+    });
+    return s;
+  },
+  big: () => {
+    const s = clone(ORIG);
+    for (const id in s.craft) s.craft[id].forEach(t => { t.mats = t.mats.map(v => Math.max(1, Math.ceil(v / 2))); t.out = t.out * 2; });
+    for (const k in s.loot) s.loot[k] = 2;
+    for (const k in s.money) s.money[k] = 2;
+    for (const k in s.dis) s.dis[k] = 2;
+    for (const t of D.trade.sell) s.trade[t.id] = Math.min(1, +(t.value * 3).toFixed(2));
+    s.trade.buy = 0.75;
+    for (const x of D.slots) s.slots[x.id] = Math.round(x.value * 1.5);
+    for (const r of D.repairs) s.repairs[r.id] = r.value + 2;
+    return s;
+  },
+};
+const PRESET_LABEL = { original: "Original", dero: "DeRo", big: "Großzügig" };
+
+let S = PRESETS.dero();
+const ui = { sec: "craft", cat: "all", q: "", tier: {}, linked: {} };
+
+const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function changes() {
+  const c = { craft: [], loot: [], dis: [], trade: [], inv: [] };
+  for (const f of D.crafting) if (!eq(S.craft[f.id], ORIG.craft[f.id])) c.craft.push(f.name);
+  for (const k in S.loot) if (S.loot[k] !== 1) c.loot.push(k);
+  for (const k in S.money) if (S.money[k] !== 1) c.loot.push(k);
+  for (const k in S.dis) if (S.dis[k] !== 1) c.dis.push(k);
+  for (const k in S.trade) if (S.trade[k] !== ORIG.trade[k]) c.trade.push(k);
+  for (const k in S.slots) if (S.slots[k] !== ORIG.slots[k]) c.inv.push(k);
+  for (const k in S.repairs) if (S.repairs[k] !== ORIG.repairs[k]) c.inv.push(k);
+  return c;
+}
+
+// ---------- Bausteine ----------
+function stepper(path, v, o, opt = {}) {
+  const dec = opt.dec || 0, ch = Math.abs(v - o) > 1e-9;
+  return `${ch ? `<span class="was">${de(o, dec)}</span>` : ""}
+    <div class="step${ch ? " ch" : ""}" data-path="${path}" data-step="${opt.step || 1}" data-min="${opt.min ?? 0}" data-max="${opt.max ?? 999}" data-dec="${dec}">
+      <button data-d="-1" aria-label="weniger">−</button><input value="${de(v, dec)}" inputmode="decimal"><button data-d="1" aria-label="mehr">+</button>
+    </div>`;
+}
+function slider(path, v, min, max, step) {
+  const p = ((v - min) / (max - min)) * 100;
+  return `<input type="range" data-path="${path}" min="${min}" max="${max}" step="${step}" value="${v}" style="--p:${p}%">`;
+}
+const range = (a, b) => (a === b ? de(a) : `${de(a)}–${de(b)}`);
+const mul = (v, m) => Math.round(v * m);
+
+// ---------- Crafting ----------
+function craftCard(f) {
+  const ti = ui.tier[f.id] ?? 0, linked = ui.linked[f.id] ?? true;
+  const t = f.tiers[ti], st = S.craft[f.id][ti], or = ORIG.craft[f.id][ti];
+  const changed = !eq(S.craft[f.id], ORIG.craft[f.id]);
+  const tiers = f.tiers.length > 1 ? `<div class="tiers">${f.tiers.map((x, i) =>
+    `<button class="tier${i === ti ? " on" : ""}" style="--c:${TIERC[x.tier] || TIERC[0]}" data-tier="${f.id}|${i}">T${x.tier}</button>`).join("")}</div>` : "";
+  const mats = t.mats.map((m, j) => `<div class="row"><div class="lab"><span class="ic">${matShort(D.materials[m[0]] || m[0])}</span>${esc(D.materials[m[0]] || m[0])}</div>
+      <div class="right">${stepper(`craft|${f.id}|${ti}|mats|${j}`, st.mats[j], or.mats[j], { max: 999 })}</div></div>`).join("");
+  const head = st.head != null ? `<div class="row"><div class="lab"><span class="ic">✜</span>Kopfschuss-Multiplikator</div>
+      <div class="right">${stepper(`craft|${f.id}|${ti}|head`, st.head, or.head, { step: 0.1, dec: 1, min: 0.5, max: 20 })}</div></div>` : "";
+  const info = [t.damage && `<span class="pill">Schaden <b>${t.damage}</b></span>`, `<span class="pill">${esc(CATS[f.cat])}</span>`].filter(Boolean).join("");
+  return `<div class="card${changed ? " changed" : ""}" data-fam="${f.id}">
+    <div class="card-h"><div><div class="name">${esc(f.name)}</div><div class="meta">${f.tiers.length > 1 ? `${f.tiers.length} Stufen` : "Eine Stufe"}</div></div>${tiers}</div>
+    <div class="rows">${mats}<div class="sep"></div>
+      <div class="row"><div class="lab"><span class="ic">×</span>Ergebnis pro Craft</div><div class="right">${stepper(`craft|${f.id}|${ti}|out`, st.out, or.out, { min: 1, max: 999 })}</div></div>
+      ${head}</div>
+    <div class="info">${info}</div>
+    <div class="card-f">${f.tiers.length > 1 ? `<label class="tog"><input type="checkbox" data-link="${f.id}"${linked ? " checked" : ""}><span></span>Für alle Stufen gleich ändern</label>` : ""}
+      ${changed ? `<button class="reset" data-reset="${f.id}">↺ Original</button>` : ""}</div>
+  </div>`;
+}
+function renderCraft() {
+  const q = ui.q.toLowerCase();
+  const list = D.crafting.filter(f => (ui.cat === "all" || f.cat === ui.cat) && (!q || f.name.toLowerCase().includes(q)));
+  const chips = [["all", "Alle"], ...Object.entries(CATS)].map(([k, l]) => `<button class="chip${ui.cat === k ? " on" : ""}" data-cat="${k}">${l}</button>`).join("");
+  return `<div class="toolbar">${chips}<label class="search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input id="q" placeholder="Rezept suchen…" value="${esc(ui.q)}"></label></div>
+    <div class="grid">${list.map(craftCard).join("") || `<div class="empty">Kein Rezept gefunden.</div>`}</div>`;
+}
+
+// ---------- Loot ----------
+function lootRow(path, name, sub, min, max, m) {
+  const ch = m !== 1;
+  return `<div class="srow${ch ? " ch" : ""}" data-row="${path}">
+    <div class="n"><span class="lab"><span class="ic">${matShort(name)}</span></span><div>${esc(name)}${sub ? `<small>${esc(sub)}</small>` : ""}</div></div>
+    <div class="vals"><span class="o">${range(min, max)}</span><span class="arrow">→</span><span class="nw" data-min="${min}" data-max="${max}">${range(mul(min, m), mul(max, m))}</span></div>
+    ${slider(path, m, 0.5, 5, 0.5)}<div class="mult">×${de(m, 1)}</div></div>`;
+}
+function renderLoot() {
+  return `<div class="panel"><h2>Geld</h2><p class="hint">Bargeld pro Fund in Schränken, Leichen und Kassen.</p>
+      ${D.money.map(m => lootRow(`money|${m.id}`, m.label, "", m.min, m.max, S.money[m.id])).join("")}</div>
+    <div class="panel"><h2>Material pro Fund</h2><p class="hint">Einzelne Materialien, die du beim Plündern aufhebst.</p>
+      ${LOOT_SINGLE.map(l => lootRow(`loot|${l.id}`, l.name, "", l.min, l.max, S.loot[l.id])).join("")}</div>
+    <div class="panel"><h2>Material-Bündel</h2><p class="hint">Größere Funde, z. B. in Werkzeugkisten oder von Apex-Gegnern.</p>
+      ${LOOT_BUNDLE.map(l => lootRow(`loot|${l.id}`, l.name, l.id.replace(/_Craftparts_FT|_FT/g, "").replace(/_/g, " "), l.min, l.max, S.loot[l.id])).join("")}</div>`;
+}
+
+// ---------- Zerlegen ----------
+function renderDis() {
+  const types = [...new Set(D.dismantle.map(x => x.type))];
+  const cell = x => x ? x.parts.map(p => {
+    const m = S.dis[p.name], ch = m !== 1;
+    return `<div class="part${ch ? " ch" : ""}"><span>${esc(p.name)}</span><b>${ch ? `<s>${range(p.min, p.max)}</s>` : ""}${range(mul(p.min, m), mul(p.max, m))}</b></div>`;
+  }).join("") : "–";
+  const rows = types.map(t => `<tr><td>${esc(t)}</td>${[1, 2, 3].map(n => `<td>${cell(D.dismantle.find(x => x.type === t && x.tier === n))}</td>`).join("")}</tr>`).join("");
+  return `<div class="panel"><h2>Ausbeute pro Material</h2><p class="hint">Gilt für alle zerlegten Waffen. Klingen kommen nur aus Klingenwaffen ab Stufe 2.</p>
+      ${DIS_MATS.map(n => {
+        const m = S.dis[n];
+        return `<div class="srow${m !== 1 ? " ch" : ""}"><div class="n"><span class="lab"><span class="ic">${matShort(n)}</span></span>${esc(n)}</div>
+          <div class="vals"><span class="nw">${m === 1 ? "Original" : "+" + de((m - 1) * 100) + " %"}</span></div>${slider(`dis|${n}`, m, 0.5, 5, 0.5)}<div class="mult">×${de(m, 1)}</div></div>`;
+      }).join("")}</div>
+    <div class="panel"><h2>Vorschau</h2><p class="hint">Was beim Zerlegen einer Waffe herauskommt, nach Waffentyp und Stufe.</p>
+      <table class="mx"><thead><tr><th>Waffentyp</th><th>Stufe 1</th><th>Stufe 2</th><th>Stufe 3</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ---------- Händler ----------
+function renderTrade() {
+  const sells = D.trade.sell.map(t => {
+    const v = S.trade[t.id], ch = v !== t.value;
+    return `<div class="srow${ch ? " ch" : ""}"><div class="n">${esc(t.label)}</div>
+      <div class="vals"><span class="o">${de(t.value * 100)} %</span><span class="arrow">→</span><span class="nw">${de(v * 100)} %</span></div>
+      ${slider(`trade|${t.id}`, v, 0, 1, 0.01)}<div class="mult">${de(v * 100)}%</div></div>`;
+  }).join("");
+  const melee = S.trade.MELEE_WEAPON_SELL_PRICE_MOD, b = S.trade.buy;
+  return `<div class="panel"><h2>Verkaufen</h2><p class="hint">Anteil vom Warenwert, den dir ein Händler zahlt. Waffen bringen im Original fast nichts.</p>${sells}
+      <div class="example">Beispiel: Eine Nahkampfwaffe im Wert von 1.000 bringt <b>${de(1000 * ORIG.trade.MELEE_WEAPON_SELL_PRICE_MOD)}</b> → <b>${de(1000 * melee)}</b> Geld.</div></div>
+    <div class="panel"><h2>Kaufen</h2><p class="hint">Faktor auf alle Einkaufspreise bei Händlern. Kleiner = billiger.</p>
+      <div class="srow${b !== ORIG.trade.buy ? " ch" : ""}"><div class="n">Kaufpreise</div>
+        <div class="vals"><span class="o">×${de(ORIG.trade.buy, 2)}</span><span class="arrow">→</span><span class="nw">×${de(b, 2)}</span></div>
+        ${slider("trade|buy", b, 0.25, 2, 0.05)}<div class="mult">×${de(b, 2)}</div></div>
+      <div class="example">Ein Item für 500 kostet dann <b>${de(500 * b)}</b>.</div></div>`;
+}
+
+// ---------- Inventar ----------
+function renderInv() {
+  return `<div class="two"><div class="panel"><h2>Plätze</h2><p class="hint">Anzahl der Slots im Rucksack und Lager.</p>
+      ${D.slots.map(x => `<div class="irow"><span>${esc(x.label)}</span><div class="right">${stepper(`slots|${x.id}`, S.slots[x.id], x.value, { min: 1, max: 999 })}</div></div>`).join("")}</div>
+    <div class="panel"><h2>Reparaturen</h2><p class="hint">Wie oft sich eine Waffe je Seltenheit reparieren lässt.</p>
+      ${D.repairs.map(r => `<div class="irow"><span class="rar" style="--c:var(--r-${r.color})"></span><span>${esc(r.label)}</span><div class="right">${stepper(`repairs|${r.id}`, S.repairs[r.id], r.value, { max: 99 })}</div></div>`).join("")}</div></div>`;
+}
+
+// ---------- Rahmen ----------
+const RENDER = { craft: renderCraft, loot: renderLoot, dis: renderDis, trade: renderTrade, inv: renderInv };
+function render(keepScroll = true) {
+  const c = changes();
+  const sec = SECTIONS.find(s => s.id === ui.sec);
+  $("#nav").innerHTML = SECTIONS.map(s => `<button class="nav${s.id === ui.sec ? " active" : ""}" data-sec="${s.id}">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[s.id]}</svg>${s.label}
+    ${c[s.id].length ? `<span class="badge">${c[s.id].length}</span>` : ""}</button>`).join("");
+  $("#title").textContent = sec.title;
+  $("#desc").textContent = sec.desc;
+  const active = Object.keys(PRESETS).find(k => eq(PRESETS[k](), S));
+  $("#presets").innerHTML = Object.keys(PRESETS).map(k => `<button class="${k === active ? "on" : ""}" data-preset="${k}">${PRESET_LABEL[k]}</button>`).join("")
+    + (active ? "" : `<span class="custom">Eigene</span>`);
+  const el = $("#content"), top = el.scrollTop;
+  el.innerHTML = RENDER[ui.sec]();
+  if (keepScroll) el.scrollTop = top;
+  const total = Object.values(c).reduce((a, x) => a + x.length, 0);
+  $("#count").textContent = total;
+  $("#count").classList.toggle("zero", !total);
+  $("#what").textContent = total ? SECTIONS.filter(s => c[s.id].length).map(s => `${s.label} ${c[s.id].length}`).join(" · ") : "Noch alles original";
+}
+
+function setPath(path, v) {
+  const p = path.split("|");
+  if (p[0] === "craft") {
+    const [, fam, ti, field, j] = p, tiers = ui.linked[fam] ?? true ? S.craft[fam].map((_, i) => i) : [+ti];
+    for (const i of tiers) { if (field === "mats") S.craft[fam][i].mats[j] = v; else S.craft[fam][i][field] = v; }
+  } else S[p[0]][p[1]] = v;
+}
+function stepCommit(box, v) {
+  const min = +box.dataset.min, max = +box.dataset.max, dec = +box.dataset.dec;
+  v = Math.min(max, Math.max(min, +v.toFixed(dec || 0)));
+  setPath(box.dataset.path, v);
+  render();
+}
+
+// ---------- Events ----------
+document.addEventListener("click", e => {
+  const t = e.target.closest("button, [data-close]");
+  if (!t) return;
+  if (t.dataset.sec) { ui.sec = t.dataset.sec; render(false); }
+  else if (t.dataset.preset) { S = PRESETS[t.dataset.preset](); render(); toast(`Voreinstellung „${PRESET_LABEL[t.dataset.preset]}“ geladen`); }
+  else if (t.dataset.cat) { ui.cat = t.dataset.cat; render(); }
+  else if (t.dataset.tier) { const [f, i] = t.dataset.tier.split("|"); ui.tier[f] = +i; render(); }
+  else if (t.dataset.reset) { S.craft[t.dataset.reset] = clone(ORIG.craft[t.dataset.reset]); render(); }
+  else if (t.dataset.d) {
+    const box = t.closest(".step"), cur = parseFloat(box.querySelector("input").value.replace(",", "."));
+    stepCommit(box, cur + t.dataset.d * +box.dataset.step);
+  }
+  else if (t.hasAttribute("data-close")) t.closest(".modal").classList.remove("open");
+  else if (t.id === "btnShare") openShare();
+  else if (t.id === "btnCopy") { $("#shareOut").select(); navigator.clipboard?.writeText($("#shareOut").value); toast("Code kopiert"); }
+  else if (t.id === "btnApply") applyShare();
+  else if (t.id === "btnPatch") openPatch();
+});
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.dataset.link) { ui.linked[t.dataset.link] = t.checked; return; }
+  const box = t.closest(".step");
+  if (box) { const v = parseFloat(t.value.replace(",", ".")); isNaN(v) ? render() : stepCommit(box, v); }
+  if (t.type === "range") render();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.closest(".step")) e.target.blur();
+  if (e.key === "Escape") document.querySelectorAll(".modal.open").forEach(m => m.classList.remove("open"));
+});
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.id === "q") { ui.q = t.value; const pos = t.selectionStart; render(); const q = $("#q"); q.focus(); q.setSelectionRange(pos, pos); return; }
+  if (t.type !== "range") return;
+  // Live-Vorschau beim Ziehen, ohne den Regler neu zu zeichnen
+  const v = +t.value;
+  setPath(t.dataset.path, v);
+  t.style.setProperty("--p", ((v - t.min) / (t.max - t.min)) * 100 + "%");
+  const row = t.closest(".srow");
+  if (!row) return;
+  const nw = row.querySelector(".nw"), m = row.querySelector(".mult");
+  row.classList.toggle("ch", t.dataset.path.startsWith("trade") ? v !== ORIG.trade[t.dataset.path.split("|")[1]] : v !== 1);
+  if (t.dataset.path.startsWith("trade|buy")) { nw.textContent = "×" + de(v, 2); m.textContent = "×" + de(v, 2); }
+  else if (t.dataset.path.startsWith("trade")) { nw.textContent = de(v * 100) + " %"; m.textContent = de(v * 100) + "%"; }
+  else {
+    m.textContent = "×" + de(v, 1);
+    if (nw.dataset.min) nw.textContent = range(mul(+nw.dataset.min, v), mul(+nw.dataset.max, v));
+    else nw.textContent = v === 1 ? "Original" : (v > 1 ? "+" : "−") + de(Math.abs(v - 1) * 100) + " %";
+  }
+});
+document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+// ---------- Teilen ----------
+function diff() {
+  const d = {};
+  for (const k in S) for (const id in S[k]) if (!eq(S[k][id], ORIG[k][id])) (d[k] ||= {})[id] = S[k][id];
+  return d;
+}
+const b64 = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64 = s => decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/"))));
+function openShare() { $("#shareOut").value = "DERO1." + b64(JSON.stringify(diff())); $("#shareIn").value = ""; $("#mShare").classList.add("open"); }
+function applyShare() {
+  try {
+    const raw = $("#shareIn").value.trim();
+    if (!raw.startsWith("DERO1.")) throw 0;
+    const d = JSON.parse(unb64(raw.slice(6))), s = clone(ORIG);
+    for (const k in d) for (const id in d[k]) if (k in s && id in s[k]) s[k][id] = d[k][id];
+    S = s; render(); $("#mShare").classList.remove("open"); toast("Einstellungen übernommen");
+  } catch { toast("Das ist kein gültiger DERO-Code"); }
+}
+
+// ---------- Patchen (Simulation) ----------
+function modCode() {
+  let h = 2166136261;
+  for (const ch of JSON.stringify(diff())) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  const x = h.toString(16).toUpperCase().padStart(8, "0");
+  return x.slice(0, 4) + "-" + x.slice(4);
+}
+function openPatch() {
+  const c = changes(), files = [];
+  if (c.craft.length) files.push("collectables_ft.scr", "inventory.scr");
+  if (c.loot.length) files.push("lootsets_ft.loot");
+  if (c.dis.length) files.push("lootsets_ft.loot");
+  if (c.trade.length) files.push("price_manager_params (5 Schwierigkeiten)", "player_variables.scr");
+  if (c.inv.length) files.push("player_variables.scr", "inventory_special.scr");
+  const uniq = [...new Set(files)];
+  const steps = ["Originaldaten aus data0.pak lesen", `${uniq.length || 0} Spieldateien anpassen`, "data2.pak schreiben", "Prüfen"];
+  $("#steps").innerHTML = steps.map((s, i) => `<div class="stp" id="st${i}"><i></i>${s}${i === 1 && uniq.length ? `<span class="files">${uniq.join(" · ")}</span>` : ""}</div>`).join("");
+  $("#result").classList.remove("show");
+  $("#mPatch").classList.add("open");
+  steps.forEach((_, i) => {
+    setTimeout(() => { $("#st" + i).className = "stp run"; }, i * 520);
+    setTimeout(() => { $("#st" + i).className = "stp done"; $("#st" + i + " i").textContent = "✓"; if (i === steps.length - 1) { $("#modcode").textContent = modCode(); $("#result").classList.add("show"); } }, i * 520 + 480);
+  });
+}
+let tt;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
+
+render(false);
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+DERO-WurfPatcher – Dying Light: The Beast
+=================================================
+
+Was macht das Tool?
+  Normale Wurfmesser (Stufe T1–T4) günstiger und besser machen:
+  DeRo-Settings = 5 Teile, 1 Draht (statt 3), 1 Klinge, Output 5 (statt 2), Kopfschuss x3,0 (statt x2,5).
+  Die Werte kannst du in der Tabelle auch selbst ändern.
+
+So geht's:
+  1. Spiel schließen.
+  2. DERO-WurfPatcher.exe doppelklicken.
+     (Falls Windows "Der Computer wurde durch Windows geschützt" zeigt:
+      "Weitere Informationen" -> "Trotzdem ausführen". Das kommt, weil die .exe nicht signiert ist.)
+  3. Der Spielordner wird normalerweise automatisch gefunden. Sonst "Ändern..." und
+     den Ordner "Dying Light The Beast" in steamapps\common auswählen.
+  4. Auf "Patchen" klicken. Fertig.
+
+Beim Spielstart steht dann "Modified game data detected" – das ist normal.
+
+Koop / zusammen spielen:
+  Das Spiel lässt nur beitreten, wenn Host und Gast exakt dieselben Spieldaten haben.
+  -> Beide patchen mit denselben Werten. Das Tool zeigt danach einen "Mod-Code" an –
+     der muss bei beiden gleich sein.
+  -> Oder beide klicken "Mod entfernen".
+  Sonst kommt "Beitritt zum Spiel nicht möglich ... Spieldaten unterschiedlich".
+
+Gut zu wissen:
+  - Die Originaldateien werden NICHT verändert. Der Mod wird als eigene Datei
+    ph_ft\source\dataN.pak (N = 2 bis 7) gespeichert.
+  - "Mod entfernen" löscht nur diese Datei -> alles wieder original.
+  - Nach einem Spiel-Update das Tool einfach nochmal öffnen und auf "Patchen" klicken.
+    Das Tool zeigt auch an, wenn der Mod veraltet ist.
+  - Verträgt sich nicht mit anderen Mods, die ebenfalls collectables_ft.scr oder
+    inventory.scr ändern – das Tool warnt dann.
+  - Neu bauen (optional): build.bat doppelklicken, Quellcode liegt in src\Patcher.cs.
