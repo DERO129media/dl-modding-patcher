@@ -16,7 +16,7 @@ using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("DERO-Patcher")]
 [assembly: System.Reflection.AssemblyProduct("DERO-Patcher")]
-[assembly: System.Reflection.AssemblyVersion("2.2.0.0")]
+[assembly: System.Reflection.AssemblyVersion("2.2.1.0")]
 
 namespace Dero
 {

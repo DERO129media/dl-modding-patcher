@@ -2,6 +2,12 @@
 
 Jeder Abschnitt `## vX.Y.Z` wird beim Release automatisch als Text übernommen und im Tool unter „Update verfügbar“ angezeigt.
 
+## v2.2.1
+
+- Crafting zeigt höchstens 4 Rezepte nebeneinander, auch auf breiten Bildschirmen.
+- „Eigene“ steht bei den Voreinstellungen jetzt immer da. Wer eine Voreinstellung lädt, holt seine eigenen Werte mit einem Klick auf „Eigene“ zurück.
+- Der Mod-Code bleibt gleich, neu patchen ist nicht nötig.
+
 ## v2.2.0
 
 - **Neue Voreinstellung „DERO“:** die Einstellung des Entwicklers. Wurfmesser, Pfeile, Granaten, Molotows und Autoreparatursets ergiebiger, Pfeile günstiger, mehr Loot und mehr Klingen beim Zerlegen, schnellere Wut im Beast-Modus.
