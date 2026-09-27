@@ -2,6 +2,13 @@
 
 Jeder Abschnitt `## vX.Y.Z` wird beim Release automatisch als Text übernommen und im Tool unter „Update verfügbar“ angezeigt.
 
+## v2.1.1
+
+- Die Voreinstellung „DERO“ wird nach einem Neustart wieder richtig erkannt (vorher stand dort „Eigene“).
+- Texte zum Koop sprechen jetzt allgemein von Mitspielern.
+- Neue Anleitung auf GitHub mit Screenshot, Lizenz (MIT) und Haftungshinweis.
+- Der Mod-Code bleibt gleich, neu patchen ist nicht nötig.
+
 ## v2.1.0
 
 Mehr Sicherheit für Spieldateien und fremde Mods (nach einem externen Code-Review).

@@ -27,7 +27,7 @@ jobs:
           if (-not $ver.StartsWith($tag)) { throw "Tag v$tag passt nicht zur AssemblyVersion $ver in src/Program.cs" }
           $hash = (Get-FileHash dist/DERO-Patcher.exe -Algorithm SHA256).Hash.ToLower()
           [IO.File]::WriteAllText("dist/DERO-Patcher.exe.sha256", "$hash  DERO-Patcher.exe")
-          Compress-Archive -Path dist/DERO-Patcher.exe, LIESMICH.txt -DestinationPath dist/DERO-Patcher.zip
+          Compress-Archive -Path dist/DERO-Patcher.exe, LIESMICH.txt, LICENSE -DestinationPath dist/DERO-Patcher.zip
           # Abschnitt "## vX.Y.Z" aus CHANGELOG.md als Release-Text
           $text = Get-Content CHANGELOG.md -Raw -Encoding utf8
           $m = [regex]::Match($text, "(?ms)^## v$([regex]::Escape($tag))\b[^\n]*\n(.*?)(?=^## |\z)")

@@ -9,24 +9,25 @@ Was macht das Tool?
   1 Draht statt 3, 5 Stück statt 2 pro Craft, Kopfschuss x3.
 
 So geht's:
-  1. Spiel schließen.
-  2. DERO-Patcher.exe doppelklicken. Es öffnet sich ein eigenes Fenster.
+  1. DERO-Patcher.exe in einen eigenen Ordner legen (z. B. Desktop\DERO-Patcher,
+     nicht unter "Programme") und doppelklicken. Es öffnet sich ein eigenes Fenster.
      (Falls Windows "Der Computer wurde durch Windows geschützt" zeigt:
       "Weitere Informationen" -> "Trotzdem ausführen". Das kommt, weil die .exe nicht signiert ist.)
-  3. Der Spielordner wird normalerweise automatisch gefunden. Sonst fragt das Tool danach:
+  2. Der Spielordner wird normalerweise automatisch gefunden. Sonst fragt das Tool danach:
      den Ordner "Dying Light The Beast" in steamapps\common auswählen.
-  4. Werte einstellen (oder eine Voreinstellung wählen) und auf "Patchen" klicken. Fertig.
+  3. Werte einstellen (oder eine Voreinstellung wählen).
+  4. Spiel schließen und auf "Patchen" klicken. Fertig.
 
 Beim Spielstart steht dann "Modified game data detected" – das ist normal.
 
 Koop / zusammen spielen:
-  Das Spiel lässt nur beitreten, wenn Host und Gast exakt dieselben Spieldaten haben.
-  -> Einer stellt die Werte ein, klickt "Teilen" und schickt den Code (DERO2....) an den anderen.
-  -> Der andere klickt "Teilen", fügt den Code bei "Code übernehmen" ein und patcht ebenfalls.
-  -> Unten rechts steht der "Mod-Code". Der muss bei beiden gleich sein.
-  -> Oder beide klicken "Mod entfernen".
+  Das Spiel lässt nur beitreten, wenn alle exakt dieselben Spieldaten haben.
+  -> Einer stellt die Werte ein, klickt "Teilen" und schickt den Code (DERO2....) an die Mitspieler.
+  -> Die anderen klicken "Teilen", fügen den Code bei "Code übernehmen" ein und patchen ebenfalls.
+  -> Unten rechts steht der "Mod-Code". Der muss bei allen gleich sein.
+  -> Oder alle klicken "Mod entfernen".
   Sonst kommt "Beitritt zum Spiel nicht möglich ... Spieldaten unterschiedlich".
-  Tipp: Beide sollten dieselbe Tool-Version haben (steht unten links).
+  Tipp: Alle sollten dieselbe Tool-Version haben (steht unten links).
 
 Updates:
   Das Tool schaut beim Start nach, ob es eine neue Version gibt, und zeigt dann oben
@@ -36,10 +37,19 @@ Updates:
 Gut zu wissen:
   - Die Originaldateien werden NICHT verändert. Der Mod wird als eigene Datei
     ph_ft\source\dataN.pak (N = 2 bis 7) gespeichert.
-  - "Mod entfernen" löscht nur diese Datei -> alles wieder original.
+  - "Mod entfernen" löscht nur diese Datei. Danach lädt das Spiel wieder die Originaldaten.
+    Dein Spielstand wird dabei NICHT zurückgesetzt: Was du mit dem Mod gesammelt oder
+    gespeichert hast, bleibt. Wer sichergehen will, sichert den Spielstand vorher.
+  - Vor jedem Ersetzen oder Entfernen wird die bisherige Mod-Datei gesichert:
+    %LOCALAPPDATA%\DERO-Patcher\Sicherungen
+  - Mod-Dateien anderer Mods fasst das Tool nie an.
   - Nach einem Spiel-Update zeigt das Tool an, dass der Mod veraltet ist.
-    Dann einfach nochmal auf "Patchen" klicken.
+    Dann einfach nochmal auf "Patchen" klicken (im Koop alle).
   - Wer noch den alten "DERO-WurfPatcher" benutzt hat: Der neue erkennt dessen Mod
     und ersetzt ihn beim ersten Patchen. Den alten kannst du löschen.
   - Werte mit dem Hinweis "ungetestet" wurden noch nicht im Spiel ausprobiert.
-  - Quellcode und Neuigkeiten: https://github.com/DERO129media/dl-modding-patcher
+  - Deinstallieren: "Mod entfernen" klicken, dann die .exe löschen.
+
+Inoffizielles Fan-Tool, nicht verbunden mit Techland. Nutzung auf eigene Gefahr.
+Lizenz: MIT (siehe LICENSE). Quellcode und Neuigkeiten:
+https://github.com/DERO129media/dl-modding-patcher

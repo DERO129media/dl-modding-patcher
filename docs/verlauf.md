@@ -33,6 +33,13 @@
   - Beschädigte Paks werden gesperrt.
   - Alte Einstellungen werden migriert.
   - Selbst gefunden: Kommazahlen in Rezeptmengen wurden still abgeschnitten, jetzt abgelehnt.
+- **Release v2.1.0** veröffentlicht.
+- Repo für Fremde aufbereitet:
+  - README neu: Spieler oben, Entwickler unten, Screenshot `docs/screenshot.png`, Haftung und Marke.
+  - `LICENSE` (MIT, Entscheidung des Users), auch in der Release-Zip.
+  - `LIESMICH.txt` korrigiert: Der Spielstand wird beim Entfernen nicht zurückgesetzt.
+  - Das Tool sagt „Mitspieler“ statt „Partnerin“ (Wunsch des Users).
+  - Dabei gefunden: Die Voreinstellung „DERO“ wurde nach dem Neustart als „Eigene“ angezeigt, weil gespeicherte Einstellungen sortierte Schlüssel haben. `eq` vergleicht jetzt unabhängig von der Reihenfolge.
 
 ## Nächster Schritt
 

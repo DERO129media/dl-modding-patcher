@@ -333,7 +333,7 @@ table.mx { width: 100%; border-collapse: separate; border-spacing: 0; }
 
 <div class="modal" id="mShare"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
   <h3 id="shareTitle">Einstellungen teilen</h3>
-  <p>Für Koop braucht ihr exakt dieselben Werte. Schick deinen Code an deine Koop-Partnerin, sie fügt ihn bei sich unter „Code übernehmen“ ein.</p>
+  <p>Für Koop braucht ihr exakt dieselben Werte. Schick deinen Code an deine Mitspieler. Sie fügen ihn bei sich unter „Code übernehmen“ ein.</p>
   <span class="lbl">Dein Code</span>
   <div class="code"><input id="shareOut" readonly aria-label="Dein Teilen-Code"><button class="btn" id="btnCopy">Kopieren</button></div>
   <div class="shint" id="shareLen"></div>
@@ -416,7 +416,9 @@ function noGame(server) {
 const D = window.DATA, SERVER = window.SERVER, LIVE = !!SERVER, VERSION = LIVE ? SERVER.version : "Demo";
 const $ = s => document.querySelector(s);
 const clone = o => JSON.parse(JSON.stringify(o));
-const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// Stabiler Vergleich unabhängig von der Schlüssel-Reihenfolge (gespeicherte Einstellungen haben sortierte Schlüssel)
+const stable = o => JSON.stringify(o, (k, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(x => [x, v[x]])) : v);
+const eq = (a, b) => stable(a) === stable(b);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const de = (n, d = 0) => n.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
 const num = (x, dec = 0) => { const r = +(+x).toFixed(dec); return de(r, Number.isInteger(r) ? 0 : dec); };
@@ -501,7 +503,7 @@ const PRESETS = {
 };
 const PRESET_INFO = {
   original: ["Original", "Alles wie im Spiel."],
-  dero: ["DERO", "Eure Koop-Einstellung: Wurfmesser kosten 1 Draht, geben 5 Stück, Kopfschuss ×3."],
+  dero: ["DERO", "Die Einstellung des Entwicklers: Wurfmesser kosten 1 Draht, geben 5 Stück, Kopfschuss ×3."],
   big: ["Großzügig", "Halbe Rezeptkosten, doppelter Output und Loot, bessere Händlerpreise, mehr Platz, leichteres Überleben."],
 };
 
@@ -521,8 +523,6 @@ if (restored) {
   try { S = validate(JSON.parse(restored), FIXES); restored = "ok"; } catch { restored = "bad"; }
 }
 if (!LIVE) { installed.diff = diff(); installed.code = fnvCode(installed.diff); }
-// Stabiler Vergleich unabhängig von der Schlüssel-Reihenfolge
-const stable = o => JSON.stringify(o, (k, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(x => [x, v[x]])) : v);
 const isInstalled = () => !!installed && !installed.foreign && !installed.legacy && !installed.outdated && stable(installed.diff || {}) === stable(diff());
 const ui = { sec: "glob", cat: "all", gchip: "all", q: "", only: false, tier: {}, split: {} };
 
@@ -799,7 +799,7 @@ function renderChrome() {
   const active = activePreset();
   $("#presets").innerHTML = Object.keys(PRESETS).map(k => `<button class="${k === active ? "on" : ""}" data-preset="${k}" aria-pressed="${k === active}" title="${esc(PRESET_INFO[k][1])}">${PRESET_INFO[k][0]}</button>`).join("")
     + (active ? "" : `<span class="custom">Eigene</span>`);
-  $("#pdesc").textContent = active ? PRESET_INFO[active][1] : "Eigene Einstellungen – mit „Teilen“ an deine Koop-Partnerin schicken.";
+  $("#pdesc").textContent = active ? PRESET_INFO[active][1] : "Eigene Einstellungen – mit „Teilen“ an deine Mitspieler schicken.";
   $("#count").textContent = n;
   $("#count").classList.toggle("zero", !n);
   $("#what").textContent = n ? summary(c) : "Noch alles original";
@@ -1034,7 +1034,7 @@ function openPatch() {
         <li class="warn">Das Spiel muss dafür geschlossen sein.</li>
         <li>Originaldateien bleiben unverändert, geschrieben wird nur ${target}.</li>
         <li>Rückgängig über „Mod entfernen“. Das setzt die Spielregeln zurück, nicht deinen Spielstand: Was du mit dem Mod gesammelt hast, bleibt.</li>
-        <li>Koop: Deine Partnerin braucht danach denselben Mod-Code${code ? ` <b>${code}</b>` : ""}.</li>
+        <li>Koop: Alle Mitspieler brauchen danach denselben Mod-Code${code ? ` <b>${code}</b>` : ""}.</li>
       </ul>${LIVE ? "" : `<p style="margin:14px 0 0;font-size:12px;color:var(--dim)">Demo – es wird nichts geschrieben.</p>`}`;
     $("#patchActs").innerHTML = `<button class="btn" data-close>Abbrechen</button><button class="btn primary small" id="btnDoPatch" data-autofocus><span>Jetzt patchen</span></button>`;
   }
@@ -1072,7 +1072,7 @@ function finishPatch(res, d) {
   preview = { key: stable(d), code: res.code, files: res.files || [], error: null };
   $("#patchBody").innerHTML = `<div class="result"><small>Fertig! Gespeichert als ${esc(res.pak)} · Dein Mod-Code</small><div class="big">${esc(res.code)}</div>
       <button class="btn" id="btnCopyCode">Mod-Code kopieren</button></div>
-    <div class="coop"><b>Koop:</b> Deine Partnerin muss denselben Mod-Code haben. Schick ihr deinen Teilen-Code, sie übernimmt ihn und patcht ebenfalls.
+    <div class="coop"><b>Koop:</b> Alle Mitspieler brauchen denselben Mod-Code. Schick ihnen deinen Teilen-Code, sie übernehmen ihn und patchen ebenfalls.
       <br><button class="btn" id="btnCopyShare">Teilen-Code kopieren</button></div>
     <p style="margin:14px 0 0">Danach einfach das Spiel starten. Beim Start erscheint der Hinweis „Modified game data detected“ – das ist normal.</p>`;
   $("#patchActs").innerHTML = `<button class="btn" data-close data-autofocus>Schließen</button>`;
@@ -1083,7 +1083,7 @@ async function removeMod() {
   if (!installed || installed.foreign) return;
   if (!await ask("Mod entfernen?", `${installed.pak} wird aus dem Spielordner entfernt (eine Sicherung bleibt im Tool). Das Spiel lädt danach wieder die Originaldaten. `
     + `Dein Spielstand wird dabei nicht zurückgesetzt: Was du mit dem Mod gesammelt oder gespeichert hast, bleibt. Deine Einstellungen hier bleiben erhalten. `
-    + `Im Koop muss auch deine Partnerin den Mod entfernen.`, "Mod entfernen")) return;
+    + `Im Koop müssen auch deine Mitspieler den Mod entfernen.`, "Mod entfernen")) return;
   if (LIVE) {
     const r = await api("/api/remove", {}).catch(() => ({ error: "Keine Verbindung zum Tool." }));
     if (r.error) { toast(r.error); return; }
