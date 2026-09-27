@@ -57,7 +57,7 @@ Eine `.exe` ohne Installation, gebaut mit `csc.exe` aus .NET Framework 4 (C# 5).
 
 ### Tests (2026-09-27)
 
-- **DeRo per `--selftest`:** Der Inhalt ist identisch mit der im Spiel verifizierten v1-Pak (nur die Kopfzeilen unterscheiden sich). Code `ECC4-CE33`, deterministisch.
+- **DERO per `--selftest`:** Der Inhalt ist identisch mit der im Spiel verifizierten v1-Pak (nur die Kopfzeilen unterscheiden sich). Code `ECC4-CE33`, deterministisch.
 - **Alle 34 globalen Einstellungen, 4 Rezepte, alle Loot-, Zerlege- und Händlerwerte gleichzeitig:**
   - 22 Dateien geändert.
   - Jede Datei hat dieselbe Zeilenzahl, CRLF bleibt erhalten.
@@ -99,7 +99,7 @@ WinForms, nur Wurfmesser (Kosten, Output, Kopfschuss) für T1–T4. Mechanik wie
 - **UI in HTML/CSS/JS**, dunkles Dying-Light-Design mit Orange `#ff6b1a` und Schrift Bahnschrift.
 - Bereiche: **Global**, Crafting, Loot (Multiplikator pro Material und Geld), Zerlegen (Multiplikator pro Material), Händler (Verkaufsanteile, Kauffaktor).
 - **Global** (Wunsch des Users, 2026-09-27) bündelt spielweite Einstellungen: Erfahrung, Todesstrafe, Ausdauer, Heilung, Beast-Modus, Material-Bonus, Reparatur & Haltbarkeit und Inventar (Slots, Stapelgrößen). Chips filtern nach Fortschritt, Überleben, Beast-Modus sowie Ausrüstung & Inventar.
-- Voreinstellungen: Original, DeRo (Wurfmesser wie v1), Großzügig.
+- Voreinstellungen: Original, DERO (Wurfmesser wie v1), Großzügig.
 - **Einstellungs-Code:** `DERO2.` + base64url(deflate-raw(`{"v": Version, "d": Diff}`)). Bei „Großzügig“ sind das etwa 1.500 Zeichen, passt in eine Discord-Nachricht. `DERO1.` (unkomprimiert, nur Diff) wird weiterhin gelesen. Beim Einfügen wird sofort geprüft und zusammengefasst, Übernehmen lässt sich rückgängig machen.
 - Der **Mod-Code** steht live in der Aktionsleiste, zusammen mit „✓ so installiert“ oder „noch nicht gepatcht“.
 

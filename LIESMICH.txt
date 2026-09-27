@@ -5,7 +5,7 @@ Was macht das Tool?
   Spielregeln anpassen: Crafting-Rezepte, Loot, Zerlegen, Händlerpreise und
   globale Werte wie Erfahrung, Todesstrafe, Ausdauer, Heilung, Beast-Modus,
   Reparaturen, Inventarplätze und Stapelgrößen.
-  Die Voreinstellung "DeRo" macht Wurfmesser günstiger und stärker:
+  Die Voreinstellung "DERO" macht Wurfmesser günstiger und stärker:
   1 Draht statt 3, 5 Stück statt 2 pro Craft, Kopfschuss x3.
 
 So geht's:

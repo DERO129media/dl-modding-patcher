@@ -16,7 +16,7 @@ using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("DERO-Patcher")]
 [assembly: System.Reflection.AssemblyProduct("DERO-Patcher")]
-[assembly: System.Reflection.AssemblyVersion("2.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("2.0.1.0")]
 
 namespace Dero
 {
@@ -215,7 +215,7 @@ namespace Dero
             return 0;
         }
 
-        // DeRo-Voreinstellung: Wurfmesser 1 Draht, 5 Stueck, Kopfschuss x3 (wie in der Oberflaeche)
+        // DERO-Voreinstellung: Wurfmesser 1 Draht, 5 Stueck, Kopfschuss x3 (wie in der Oberflaeche)
         public static Dictionary<string, object> DeroDiff(GameModel m)
         {
             Family f = m.FamById["Craftplan_ThrowingKnives_FT"];

@@ -2,7 +2,7 @@
 
 **DERO-Patcher** für **Dying Light: The Beast** (Steam AppID 3008130). Ändert Spielregeln (Rezepte, Loot, Zerlegen, Händler, globale Werte), indem geänderte Skripte in eine eigene `dataN.pak` geschrieben werden. Die Originaldateien bleiben unberührt. Öffentliches Repo: `DERO129media/dl-modding-patcher`, Releases mit Auto-Update.
 
-Kommunikation mit dem User auf **Deutsch**. Alle UI-Texte sind auf Deutsch.
+Kommunikation mit dem User auf **Deutsch**. Alle UI-Texte sind auf Deutsch. Schreibweise immer **„DERO“** (nie „DeRo“), auch in UI, Doku und Kommentaren.
 
 ## Befehle
 
