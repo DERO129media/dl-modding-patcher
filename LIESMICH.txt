@@ -22,8 +22,8 @@ Beim Spielstart steht dann "Modified game data detected" – das ist normal.
 
 Koop / zusammen spielen:
   Das Spiel lässt nur beitreten, wenn alle exakt dieselben Spieldaten haben.
-  -> Einer stellt die Werte ein, klickt "Teilen / Übernehmen" und schickt den Code (DERO2....) an die Mitspieler.
-  -> Die anderen klicken ebenfalls "Teilen / Übernehmen", fügen den Code bei "Code übernehmen" ein und patchen.
+  -> Einer stellt die Werte ein, klickt "Teilen" und schickt den Code (DERO2....) an die Mitspieler.
+  -> Die anderen klicken ebenfalls "Teilen", fügen den Code bei "Code übernehmen" ein und patchen.
   -> Unten rechts steht der "Mod-Code". Der muss bei allen gleich sein.
   -> Oder alle klicken "Mod entfernen".
   Sonst kommt "Beitritt zum Spiel nicht möglich ... Spieldaten unterschiedlich".

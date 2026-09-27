@@ -44,7 +44,7 @@
 - **v2.2.0 vorbereitet** nach dem ersten Test des Users mit v2.1.1:
   - Die Voreinstellung „DERO“ ist jetzt die Einstellung des Users (22 Änderungen, Mod-Code `0217-2D9D`), gelesen aus der installierten `data2.pak` des Users.
   - Anzeigefehler gefunden: Das Aufladetempo stand auf 1,25, die Anzeige rundete auf ×1,3. `gfmt` zeigt jetzt zwei Nachkommastellen, wenn nötig.
-  - Werte anderer Schwierigkeitsgrade als Badges, Banner für alte/veraltete Mod entfernt (steht im Status), Knopf „Teilen / Übernehmen“, Status unten links über die Trennlinie gezogen.
+  - Werte anderer Schwierigkeitsgrade als Badges, Banner für alte/veraltete Mod entfernt (steht im Status), Teilen-Dialog heißt „Teilen und übernehmen“ (Knopf bleibt „Teilen“, Wunsch des Users), Status unten links über die Trennlinie gezogen.
 
 ## Nächster Schritt
 

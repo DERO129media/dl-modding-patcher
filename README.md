@@ -21,8 +21,8 @@ Beim Spielstart erscheint danach „Modified game data detected“. Das ist norm
 
 Das Spiel lässt nur Spieler zusammen, deren Spieldaten exakt gleich sind. Sonst heißt es „Beitritt zum Spiel nicht möglich … Spieldaten unterschiedlich“.
 
-1. Einer stellt die Werte ein, klickt auf **Teilen / Übernehmen** und schickt den Code (`DERO2.…`) an die Mitspieler.
-2. Die anderen fügen ihn unter **Teilen / Übernehmen → Code übernehmen** ein und patchen ebenfalls.
+1. Einer stellt die Werte ein, klickt auf **Teilen** und schickt den Code (`DERO2.…`) an die Mitspieler.
+2. Die anderen fügen ihn unter **Teilen → Code übernehmen** ein und patchen ebenfalls.
 3. Unten rechts steht der **Mod-Code**. Er muss bei allen gleich sein.
 
 Am besten nutzen alle dieselbe Tool-Version. Sie steht unten links.

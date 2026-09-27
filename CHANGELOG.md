@@ -9,7 +9,7 @@ Jeder Abschnitt `## vX.Y.Z` wird beim Release automatisch als Text übernommen u
 - Bei der Todesstrafe erklärt ein „?“ neben dem Regler, wie der XP-Verlust berechnet wird.
 - Kommawerte werden genau angezeigt (z. B. ×1,25 statt gerundet ×1,3).
 - Der Hinweis oben bei einer alten oder veralteten Mod ist weg. Das steht weiter links im Status und unten bei „noch nicht gepatcht“.
-- Der Knopf heißt jetzt „Teilen / Übernehmen“, weil man dort auch Codes von Mitspielern einfügt.
+- „Teilen“ sagt jetzt deutlicher, dass man dort auch den Code eines Mitspielers übernimmt.
 - Status unten links aufgeräumt.
 
 **Koop:** Wer die Voreinstellung „DERO“ nutzt, bekommt neue Werte und damit einen neuen Mod-Code. Bitte beide updaten und neu patchen. Eigene Einstellungen behalten ihren Mod-Code.

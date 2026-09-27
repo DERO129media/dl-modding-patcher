@@ -332,14 +332,14 @@ table.mx { width: 100%; border-collapse: separate; border-spacing: 0; }
       <div class="what"><b>Geändert</b><span id="what">Noch alles original</span></div>
       <div class="sp"></div>
       <div class="modc" id="modc" title="Für Koop müssen beide Spieler denselben Mod-Code haben."></div>
-      <button class="btn" id="btnShare"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Teilen / Übernehmen</button>
+      <button class="btn" id="btnShare" title="Deinen Code an Mitspieler schicken oder ihren Code übernehmen"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Teilen</button>
       <button class="btn primary" id="btnPatch"><span>Patchen</span></button>
     </div>
   </main>
 </div>
 
 <div class="modal" id="mShare"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
-  <h3 id="shareTitle">Teilen / Übernehmen</h3>
+  <h3 id="shareTitle">Teilen und übernehmen</h3>
   <p>Für Koop braucht ihr exakt dieselben Werte. Schick deinen Code an deine Mitspieler. Sie fügen ihn bei sich unter „Code übernehmen“ ein.</p>
   <span class="lbl">Dein Code</span>
   <div class="code"><input id="shareOut" readonly aria-label="Dein Teilen-Code"><button class="btn" id="btnCopy">Kopieren</button></div>
@@ -816,7 +816,7 @@ function renderChrome() {
   const active = activePreset();
   $("#presets").innerHTML = Object.keys(PRESETS).map(k => `<button class="${k === active ? "on" : ""}" data-preset="${k}" aria-pressed="${k === active}" title="${esc(PRESET_INFO[k][1])}">${PRESET_INFO[k][0]}</button>`).join("")
     + (active ? "" : `<span class="custom">Eigene</span>`);
-  $("#pdesc").textContent = active ? PRESET_INFO[active][1] : "Eigene Einstellungen – mit „Teilen / Übernehmen“ an deine Mitspieler schicken.";
+  $("#pdesc").textContent = active ? PRESET_INFO[active][1] : "Eigene Einstellungen – mit „Teilen“ an deine Mitspieler schicken.";
   $("#count").textContent = n;
   $("#count").classList.toggle("zero", !n);
   $("#what").textContent = n ? summary(c) : "Noch alles original";
