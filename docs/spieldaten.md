@@ -140,7 +140,9 @@ Alles einzelne Zahlen in klaren Zeilen, gleiches Muster wie die verifizierten Wu
 | Reparatur | `player_variables.scr` | `PerfectRepairChance` 0,0, `MeleeWpnDurabilityMulReduce` 2,0 (Leicht 1,33) |
 | Umskillen | `progression/legendlevelconfig.scr` | `Respec { CostCash(5000); }` |
 | Friendly Fire | `player_variables.scr` | `FriendlyFireMultiplier` 0,05 (Leicht 0, Schwer 0,1, Albtraum 0,2) |
-| Stapelgrößen | `inventory/inventory.scr` | `MaxStackCount(n)` an 369 Items |
+| Stapelgrößen | `inventory/inventory*.scr` | `MaxStackCount(n)`: Wurfwaffen 99 (75 Items), Medkits 99, Tränke & Booster 99, Munition 999, Dietriche 99, Materialien 9999, Wertsachen 9999 |
+| Heilwerte | `healingdefinitions.scr` | `Medkit_Small_FT_T1..4` 125/200/275/350 HP, `HealthRegenerationPotion_FT_T1..4` 0,5–1,25 % MaxHealth/s. Ältere Einträge ohne `_FT` stammen vermutlich aus Dying Light 2 |
+| Auto-Heilung | `player_variables*.scr` | `MaxAutoRegenHealthPercent` 34 (Leicht 40, Schwer 25, Albtraum 20), `HealthRegenerationDelay` 7 s (5 / 10 / 12,5) |
 
 **Bewusst nicht anfassen** (Risiko für Stabilität/Koop): Tageszeiten (`daytime.def`: laut Kommentar an KI, Sound und viele andere Dateien gekoppelt), Sprung- und Parkour-Physik, Gegner-Spawns und Dichte, `gameconfig/`, `savegame/`, `versioning/`, Quests und Story.
 

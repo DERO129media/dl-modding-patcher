@@ -11,4 +11,7 @@ Bei Klärung hier abhaken und das Ergebnis in die passende Doku übernehmen.
 - [ ] **Kandidaten aus „Weitere Stellschrauben“** (spieldaten.md) im Spiel testen, bevor sie ins Tool kommen: Wirkt z. B. `CommonCraftDroppedMul` auch außerhalb von Leicht?
 - [ ] **Grenze bei den Pak-Nummern**: Werden wirklich nur `data2` bis `data7` geladen, und gewinnt die höhere Nummer? Bisher nur laut Community.
 - [ ] **Was prüft der Koop-Abgleich genau?** Die ganze Pak-Datei oder den Inhalt?
-- [ ] **Stapelgrößen von Materialien**: Wo stehen die `Item("Craft_Blades")`-Definitionen? Sie sind nicht in `inventory*.scr` unter diesem Namen zu finden.
+- [x] **Stapelgrößen von Materialien**: Sie stehen doch in `inventory.scr` (`Item("Craft_Scrap", CategoryType_CraftComponent)`), alle mit `MaxStackCount(9999)`. Ein Regler lohnt sich nicht.
+- [ ] **`CommonCraftDroppedMul`/`UncommonCraftDroppedMul`**: Welche Materialien sind „common“ und welche „uncommon“? Die Material-Items haben nur `Color` (Grün/Blau/Lila), und die Lokalisierung hat keinen Text dazu. Deshalb gibt es im Tool vorerst einen gemeinsamen Regler.
+- [ ] **`MeleeWpnDurabilityMulReduce`**: Heißt ein höherer Wert mehr Verschleiß? Das ist nur aus Leicht 1,33 < Normal 2,0 abgeleitet.
+- [ ] **`LegendBonus_Coop`**: Gilt er nur für Legendenpunkte oder auch für normale XP?

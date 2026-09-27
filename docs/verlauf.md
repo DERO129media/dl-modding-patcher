@@ -9,6 +9,8 @@
 - Recherche für v2: Loot, Zerlegen, Händler, Inventar sowie das Lokalisierungsformat geknackt.
 - **UI-Prototyp** gebaut, der User findet ihn gut („sieht doch schon ordentlich aus“).
 - Repo angelegt: `Desktop\code\dl-modding-patcher`, erster Commit.
+- Alle 1.882 Skripte nach weiteren Stellschrauben durchsucht (Liste in spieldaten.md). Die Schwierigkeitsgrade überschreiben nur Einzelwerte.
+- Wunsch des Users: spielweite Einstellungen in einem eigenen Bereich **Global** bündeln. Im Prototyp umgesetzt mit 34 Einstellungen. „Inventar“ ist darin aufgegangen.
 
 ## Nächster Schritt
 

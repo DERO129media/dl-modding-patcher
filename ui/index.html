@@ -154,6 +154,12 @@ table.mx { width: 100%; border-collapse: separate; border-spacing: 0; }
 .irow { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
 .irow:first-of-type { border-top: 0; }
 .irow .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.gcols { columns: 2 540px; column-gap: 16px; }
+.gcols .panel { break-inside: avoid; }
+.gcols .srow { grid-template-columns: minmax(150px, 1.3fr) minmax(88px, auto) minmax(110px, 1fr) 62px; gap: 12px; }
+.srow .n small.df { color: var(--uv); opacity: .85; }
+.sub-h { margin: 14px 0 2px; font: 600 11px/1 var(--fd); letter-spacing: .22em; text-transform: uppercase; color: var(--dim); }
+.irow small { display: block; color: var(--dim); font-size: 11px; }
 .example { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--bg); border: 1px dashed var(--line2); color: var(--muted); font-size: 13px; }
 .example b { color: var(--accent2); font: 700 15px var(--fd); }
 
@@ -277,14 +283,14 @@ const ICON = {
   loot: '<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
   dis: '<path d="M4 20l6-6M14 4l6 6-8 8-6-6z"/><path d="M11 9l4 4"/>',
   trade: '<circle cx="9" cy="9" r="6"/><path d="M15.5 9.5A6 6 0 1 1 9.5 15.5"/>',
-  inv: '<path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  glob: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
 };
 const SECTIONS = [
+  { id: "glob", label: "Global", title: "Globale Einstellungen", desc: "Gilt für das ganze Spiel. Andere Schwierigkeitsgrade ändern sich im gleichen Verhältnis mit. Die Werte kommen aus dem Spielcode, ihre Wirkung ist größtenteils noch nicht im Spiel getestet." },
   { id: "craft", label: "Crafting", title: "Crafting", desc: "Rezepte günstiger machen, mehr pro Craft herausholen und Wurfwaffen stärker machen." },
   { id: "loot", label: "Loot", title: "Loot & Funde", desc: "Wie viel Material und Geld du beim Plündern findest. Der Regler multipliziert die Menge pro Fund." },
   { id: "dis", label: "Zerlegen", title: "Zerlegen", desc: "Wie viel Material beim Zerlegen von Waffen herauskommt – die beste Quelle für Klingen." },
   { id: "trade", label: "Händler", title: "Händler", desc: "Wie viel dir Händler zahlen und was Einkäufe kosten." },
-  { id: "inv", label: "Inventar", title: "Inventar", desc: "Mehr Platz im Rucksack und im Lager, häufigere Reparaturen." },
 ];
 const TIERC = ["var(--r-white)", "var(--r-green)", "var(--r-blue)", "var(--r-violet)", "var(--r-orange)"];
 const matShort = n => n.slice(0, 2).toUpperCase();
@@ -295,17 +301,18 @@ D.crafting.sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat) ||
 const DIS_MATS = [...new Set(D.dismantle.flatMap(x => x.parts.map(p => p.name)))];
 const LOOT_SINGLE = D.loot.filter(l => !/Craftparts/.test(l.id));
 const LOOT_BUNDLE = D.loot.filter(l => /Craftparts/.test(l.id));
+const GITEMS = Object.fromEntries(D.global.flatMap(g => g.items).map(i => [i.id, i]));
+const GCHIPS = { all: "Alle", fort: "Fortschritt", survive: "Überleben", beast: "Beast-Modus", gear: "Ausrüstung & Inventar" };
 
 function original() {
-  const s = { craft: {}, loot: {}, money: {}, dis: {}, trade: {}, slots: {}, repairs: {} };
+  const s = { glob: {}, craft: {}, loot: {}, money: {}, dis: {}, trade: {} };
+  for (const id in GITEMS) s.glob[id] = GITEMS[id].value;
   for (const f of D.crafting) s.craft[f.id] = f.tiers.map(t => ({ mats: t.mats.map(m => m[1]), out: t.out, head: t.head ?? null }));
   for (const l of D.loot) s.loot[l.id] = 1;
   for (const m of D.money) s.money[m.id] = 1;
   for (const m of DIS_MATS) s.dis[m] = 1;
   for (const t of D.trade.sell) s.trade[t.id] = t.value;
   s.trade.buy = D.trade.buy;
-  for (const x of D.slots) s.slots[x.id] = x.value;
-  for (const r of D.repairs) s.repairs[r.id] = r.value;
   return s;
 }
 const ORIG = original();
@@ -328,26 +335,30 @@ const PRESETS = {
     for (const k in s.dis) s.dis[k] = 2;
     for (const t of D.trade.sell) s.trade[t.id] = Math.min(1, +(t.value * 3).toFixed(2));
     s.trade.buy = 0.75;
-    for (const x of D.slots) s.slots[x.id] = Math.round(x.value * 1.5);
-    for (const r of D.repairs) s.repairs[r.id] = r.value + 2;
+    Object.assign(s.glob, { ActionsXPMultiplier: 1.5, LegendBonus_Coop: 1.3, DeathPenalty: 0.5, StaminaRegenerationMul: 1.3,
+      MedkitHeal: 1.5, CraftDropped: 0.5, MeleeWpnDurabilityMulReduce: 0.75, PerfectRepairChance: 0.25 });
+    for (const [id, i] of Object.entries(GITEMS)) {
+      if (id.startsWith("Repair_")) s.glob[id] = i.value + 2;
+      if (i.group === "Plätze") s.glob[id] = Math.round(i.value * 1.5);
+      if (i.group === "Stapelgröße") s.glob[id] = Math.min(9999, i.value * 2);
+    }
     return s;
   },
 };
 const PRESET_LABEL = { original: "Original", dero: "DeRo", big: "Großzügig" };
 
 let S = PRESETS.dero();
-const ui = { sec: "craft", cat: "all", q: "", tier: {}, linked: {} };
+const ui = { sec: "glob", cat: "all", gchip: "all", q: "", tier: {}, linked: {} };
 
 const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 function changes() {
-  const c = { craft: [], loot: [], dis: [], trade: [], inv: [] };
+  const c = { glob: [], craft: [], loot: [], dis: [], trade: [] };
+  for (const k in S.glob) if (S.glob[k] !== ORIG.glob[k]) c.glob.push(GITEMS[k].label);
   for (const f of D.crafting) if (!eq(S.craft[f.id], ORIG.craft[f.id])) c.craft.push(f.name);
   for (const k in S.loot) if (S.loot[k] !== 1) c.loot.push(k);
   for (const k in S.money) if (S.money[k] !== 1) c.loot.push(k);
   for (const k in S.dis) if (S.dis[k] !== 1) c.dis.push(k);
   for (const k in S.trade) if (S.trade[k] !== ORIG.trade[k]) c.trade.push(k);
-  for (const k in S.slots) if (S.slots[k] !== ORIG.slots[k]) c.inv.push(k);
-  for (const k in S.repairs) if (S.repairs[k] !== ORIG.repairs[k]) c.inv.push(k);
   return c;
 }
 
@@ -450,16 +461,66 @@ function renderTrade() {
       <div class="example">Ein Item für 500 kostet dann <b>${de(500 * b)}</b>.</div></div>`;
 }
 
-// ---------- Inventar ----------
-function renderInv() {
-  return `<div class="two"><div class="panel"><h2>Plätze</h2><p class="hint">Anzahl der Slots im Rucksack und Lager.</p>
-      ${D.slots.map(x => `<div class="irow"><span>${esc(x.label)}</span><div class="right">${stepper(`slots|${x.id}`, S.slots[x.id], x.value, { min: 1, max: 999 })}</div></div>`).join("")}</div>
-    <div class="panel"><h2>Reparaturen</h2><p class="hint">Wie oft sich eine Waffe je Seltenheit reparieren lässt.</p>
-      ${D.repairs.map(r => `<div class="irow"><span class="rar" style="--c:var(--r-${r.color})"></span><span>${esc(r.label)}</span><div class="right">${stepper(`repairs|${r.id}`, S.repairs[r.id], r.value, { max: 99 })}</div></div>`).join("")}</div></div>`;
+// ---------- Global ----------
+const DIFF_ORDER = ["Leicht", "Schwer", "Albtraum"];
+function gfmt(i, v) {
+  const d = i.step < 0.1 ? 2 : 1;
+  switch (i.fmt) {
+    case "x": return "×" + de(v, d);
+    case "pct": return de(v * 100) + " %";
+    case "plus": return v ? "+" + de(v * 100) + " %" : "kein Bonus";
+    case "pctv": return de(v) + " %";
+    case "s": return de(v, 1) + " s";
+    default: return de(v);
+  }
+}
+const num = (x, dec = 0) => { const r = +x.toFixed(dec); return de(r, Number.isInteger(r) ? 0 : dec); };
+function gvals(i, v) {
+  const o = i.value;
+  if (i.base) {
+    const r = m => `${num(i.base[0] * m, i.dec)}–${num(i.base[1] * m, i.dec)} ${i.unit}`;
+    return v === o ? `<span class="nw">${r(o)}</span>` : `<span class="o">${r(o)}</span><span class="arrow">→</span><span class="nw">${r(v)}</span>`;
+  }
+  return v === o ? `<span class="nw">Original</span>` : `<span class="o">${gfmt(i, o)}</span><span class="arrow">→</span><span class="nw">${gfmt(i, v)}</span>`;
+}
+function deathExample(v) {
+  const e = GITEMS.DeathPenalty.example, p = x => num(x * 100, 2) + " %";
+  return `Beispiel auf Stufe 5: Tagsüber verlierst du <b>${p(e.pct * e.day * v)}</b>, nachts <b>${p(e.pct * e.night * v)}</b> deiner XP`
+    + (v === 1 ? "." : ` (Original ${p(e.pct * e.day)} / ${p(e.pct * e.night)}).`);
+}
+function gdiff(i) {
+  if (!i.diff) return "";
+  const f = i.fmt === "pct" ? x => "×" + de(x, 2) : x => gfmt(i, x);
+  return `<small class="df">${DIFF_ORDER.filter(k => k in i.diff).map(k => `${k} ${f(i.diff[k])}`).join(" · ")}</small>`;
+}
+function gslider(i) {
+  const v = S.glob[i.id];
+  return `<div class="srow${v !== i.value ? " ch" : ""}" data-gid="${i.id}">
+    <div class="n"><div>${esc(i.label)}${i.sub ? `<small>${esc(i.sub)}</small>` : ""}${gdiff(i)}</div></div>
+    <div class="vals">${gvals(i, v)}</div>
+    ${slider(`glob|${i.id}`, v, i.min, i.max, i.step)}<div class="mult">${gfmt(i, v)}</div></div>`;
+}
+function gstep(i) {
+  return `<div class="irow">${i.color ? `<span class="rar" style="--c:var(--r-${i.color})"></span>` : ""}
+    <span>${esc(i.label.replace(/^Reparaturen: /, ""))}${i.sub ? `<small>${esc(i.sub)}</small>` : ""}</span>
+    <div class="right">${stepper(`glob|${i.id}`, S.glob[i.id], i.value, { min: i.min, max: i.max, step: i.step })}</div></div>`;
+}
+const ggroup = i => i.group || (i.color ? "Reparaturen je Seltenheit" : "");
+function gpanel(g) {
+  const sl = g.items.filter(i => i.ctl === "slider"), st = g.items.filter(i => i.ctl === "step");
+  const steps = [...new Set(st.map(ggroup))].map(gr =>
+    `${gr ? `<div class="sub-h">${esc(gr)}</div>` : ""}${st.filter(i => ggroup(i) === gr).map(gstep).join("")}`).join("");
+  const ex = g.id === "death" ? `<div class="example" id="deathEx">${deathExample(S.glob.DeathPenalty)}</div>` : "";
+  return `<div class="panel"><h2>${esc(g.title)}</h2><p class="hint">${esc(g.hint)}</p>${sl.map(gslider).join("")}${steps}${ex}</div>`;
+}
+function renderGlob() {
+  const chips = Object.entries(GCHIPS).map(([k, l]) => `<button class="chip${ui.gchip === k ? " on" : ""}" data-gchip="${k}">${l}</button>`).join("");
+  const list = D.global.filter(g => ui.gchip === "all" || g.chip === ui.gchip);
+  return `<div class="toolbar">${chips}</div><div class="gcols">${list.map(gpanel).join("")}</div>`;
 }
 
 // ---------- Rahmen ----------
-const RENDER = { craft: renderCraft, loot: renderLoot, dis: renderDis, trade: renderTrade, inv: renderInv };
+const RENDER = { glob: renderGlob, craft: renderCraft, loot: renderLoot, dis: renderDis, trade: renderTrade };
 function render(keepScroll = true) {
   const c = changes();
   const sec = SECTIONS.find(s => s.id === ui.sec);
@@ -501,6 +562,7 @@ document.addEventListener("click", e => {
   if (t.dataset.sec) { ui.sec = t.dataset.sec; render(false); }
   else if (t.dataset.preset) { S = PRESETS[t.dataset.preset](); render(); toast(`Voreinstellung „${PRESET_LABEL[t.dataset.preset]}“ geladen`); }
   else if (t.dataset.cat) { ui.cat = t.dataset.cat; render(); }
+  else if (t.dataset.gchip) { ui.gchip = t.dataset.gchip; render(false); }
   else if (t.dataset.tier) { const [f, i] = t.dataset.tier.split("|"); ui.tier[f] = +i; render(); }
   else if (t.dataset.reset) { S.craft[t.dataset.reset] = clone(ORIG.craft[t.dataset.reset]); render(); }
   else if (t.dataset.d) {
@@ -535,6 +597,14 @@ document.addEventListener("input", e => {
   const row = t.closest(".srow");
   if (!row) return;
   const nw = row.querySelector(".nw"), m = row.querySelector(".mult");
+  if (row.dataset.gid) {
+    const i = GITEMS[row.dataset.gid];
+    row.classList.toggle("ch", v !== i.value);
+    row.querySelector(".vals").innerHTML = gvals(i, v);
+    m.textContent = gfmt(i, v);
+    if (i.id === "DeathPenalty") $("#deathEx").innerHTML = deathExample(v);
+    return;
+  }
   row.classList.toggle("ch", t.dataset.path.startsWith("trade") ? v !== ORIG.trade[t.dataset.path.split("|")[1]] : v !== 1);
   if (t.dataset.path.startsWith("trade|buy")) { nw.textContent = "×" + de(v, 2); m.textContent = "×" + de(v, 2); }
   else if (t.dataset.path.startsWith("trade")) { nw.textContent = de(v * 100) + " %"; m.textContent = de(v * 100) + "%"; }
@@ -578,7 +648,7 @@ function openPatch() {
   if (c.loot.length) files.push("lootsets_ft.loot");
   if (c.dis.length) files.push("lootsets_ft.loot");
   if (c.trade.length) files.push("price_manager_params (5 Schwierigkeiten)", "player_variables.scr");
-  if (c.inv.length) files.push("player_variables.scr", "inventory_special.scr");
+  for (const id in S.glob) if (S.glob[id] !== ORIG.glob[id]) files.push(...GITEMS[id].files);
   const uniq = [...new Set(files)];
   const steps = ["Originaldaten aus data0.pak lesen", `${uniq.length || 0} Spieldateien anpassen`, "data2.pak schreiben", "Prüfen"];
   $("#steps").innerHTML = steps.map((s, i) => `<div class="stp" id="st${i}"><i></i>${s}${i === 1 && uniq.length ? `<span class="files">${uniq.join(" · ")}</span>` : ""}</div>`).join("");

@@ -14,7 +14,11 @@
 - **UI in HTML/CSS/JS**, dunkles Dying-Light-Design mit Orange `#ff6b1a` und Schrift Bahnschrift.
 - **Host:** Die C#-`.exe` startet einen lokalen HTTP-Server (`TcpListener`/`HttpListener` auf localhost) und öffnet `msedge --app=http://localhost:<port>`, also ein Fenster ohne Browser-Leiste. Es bleibt eine einzige Datei ohne Installation. Die Alternative WPF wurde verworfen, weil sie aufwendiger zu gestalten ist.
 - **Tweak-Katalog statt fest verdrahteter Logik:** Jede Einstellung wird als Eintrag beschrieben (Datei, Block, Feld, Regex), der Patcher bleibt generisch. Neue Einstellungen brauchen dann nur neue Katalog-Einträge.
-- Bereiche: Crafting, Loot (Multiplikator pro Material und Geld), Zerlegen (Multiplikator pro Material), Händler (Verkaufsanteile, Kauffaktor), Inventar (Slots, Reparaturen).
+- Bereiche: **Global**, Crafting, Loot (Multiplikator pro Material und Geld), Zerlegen (Multiplikator pro Material), Händler (Verkaufsanteile, Kauffaktor).
+- **Global** (Wunsch des Users, 2026-09-27) bündelt spielweite Einstellungen: Erfahrung, Todesstrafe, Ausdauer, Heilung, Beast-Modus, Material-Bonus, Reparatur & Haltbarkeit und Inventar (Slots, Stapelgrößen). Der frühere Bereich „Inventar“ ist darin aufgegangen. Chips filtern nach Fortschritt, Überleben, Beast-Modus sowie Ausrüstung & Inventar.
+  - Jede Einstellung ist in `extract_data.py` ein Katalog-Eintrag: `id, label, sub, value, ctl (slider|step), fmt, mode, files, params, min/max/step`, optional `base` + `unit` (Vorschau skalierter Werte) und `diff` (Werte der Schwierigkeitsgrade).
+  - `mode` sagt dem Patcher, wie die Schwierigkeits-Varianten mitgezogen werden. `scale` = jedes Vorkommen im gleichen Verhältnis (Regler zeigt den Normal-Wert oder einen Faktor), `add` = Differenz auf alle Varianten addieren, `set` = überall derselbe Wert.
+  - Sammel-Regler wie „Kosten der Fähigkeiten“ skalieren alle `ActionCost(...)` einer Datei, „XP-Verlust beim Tod“ alle vier `*DeathPenaltyXpLossMultiplier*`.
 - Voreinstellungen: Original, DeRo (entspricht v1, damit Koop kompatibel bleibt), Großzügig.
 - **Einstellungs-Code:** `DERO1.` + base64url(JSON-Diff gegen die Originalwerte), damit Koop-Partner identische Werte übernehmen. Im Prototyp funktioniert das schon.
 - Der Mod-Code im Prototyp ist nur ein Platzhalter (FNV-Hash). Echt ist der MD5 der Pak.
@@ -22,7 +26,7 @@
 
 ## Datenfluss im Prototyp
 
-`tools/extract_data.py` → `ui/data.js` (`window.DATA = {crafting, loot, money, dismantle, trade, slots, repairs, materials}`) → `ui/index.html`.
+`tools/extract_data.py` → `ui/data.js` (`window.DATA = {crafting, loot, money, dismantle, trade, global, materials}`) → `ui/index.html`.
 Der Zustand `S` enthält pro Bereich Werte bzw. Multiplikatoren. `ORIG` ist der Originalzustand, und Änderungen werden per Deep-Compare gezählt.
 In v2 soll die `.exe` diese Daten zur Laufzeit liefern, portiert nach C#.
 
