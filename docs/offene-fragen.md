@@ -14,4 +14,6 @@ Bei Klärung hier abhaken und das Ergebnis in die passende Doku übernehmen.
 - [x] **Stapelgrößen von Materialien**: Sie stehen doch in `inventory.scr` (`Item("Craft_Scrap", CategoryType_CraftComponent)`), alle mit `MaxStackCount(9999)`. Ein Regler lohnt sich nicht.
 - [ ] **`CommonCraftDroppedMul`/`UncommonCraftDroppedMul`**: Welche Materialien sind „common“ und welche „uncommon“? Die Material-Items haben nur `Color` (Grün/Blau/Lila), und die Lokalisierung hat keinen Text dazu. Deshalb gibt es im Tool vorerst einen gemeinsamen Regler.
 - [ ] **`MeleeWpnDurabilityMulReduce`**: Heißt ein höherer Wert mehr Verschleiß? Das ist nur aus Leicht 1,33 < Normal 2,0 abgeleitet.
+- [ ] **Weniger Inventarplätze als belegt:** Was passiert mit Gegenständen in den überzähligen Plätzen? Ungeklärt, deshalb lassen sich Plätze und Stapelgrößen seit v2.1.0 nur vergrößern.
+- [ ] **Munitionsplätze über 100:** Im Skript steht `limited max is 100` neben `AmmoSlotsCount`. Ob das Spiel mehr ignoriert oder abstürzt, ist nicht getestet. Das Tool begrenzt auf 100.
 - [ ] **`LegendBonus_Coop`**: Gilt er nur für Legendenpunkte oder auch für normale XP?

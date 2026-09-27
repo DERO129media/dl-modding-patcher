@@ -96,8 +96,18 @@ namespace Dero
         {
             if (!Json.IsNumber(o)) throw new InvalidDataException("Ungültiger Wert bei " + id);
             double v = Json.D(o);
+            // NaN/Unendlich zuerst: an ihnen scheitert jeder Vergleich, sie wuerden sonst alle Grenzen umgehen
+            if (double.IsNaN(v) || double.IsInfinity(v)) throw new InvalidDataException("Ungültiger Wert bei " + id);
             if (v < min - 1e-9 || v > max + 1e-9) throw new InvalidDataException("Wert außerhalb des Bereichs bei " + id);
             return v;
+        }
+
+        // Ganze Zahl (Rezeptmengen): 2.5 wuerde sonst still zu 2, im Pak-Kopf stuende aber 2.5
+        static int Int(object o, string id, int min, int max)
+        {
+            double v = Num(o, id, min, max);
+            if (v != Math.Floor(v)) throw new InvalidDataException("Keine ganze Zahl bei " + id);
+            return (int)v;
         }
 
         static double Factor(object o, string id) { return Num(o, id, 0.5, 5); }
@@ -107,7 +117,24 @@ namespace Dero
             GItem i;
             if (!m.GItems.TryGetValue(id, out i)) throw new InvalidDataException("Unbekannte Einstellung: " + id);
             double v = Num(val, id, i.Min, i.Max);
-            if (Math.Abs(v - i.Value) > 1e-12) i.Apply(ctx, v, i.Value);
+            if (Math.Abs(v - i.Value) < 1e-12) return;
+            i.Apply(ctx, v, i.Value);
+            CheckBounds(ctx, i);
+        }
+
+        // Nach Skalierung und Rundung: jeder geschriebene Wert (alle Schwierigkeiten, Perma-World) muss in den Grenzen liegen
+        static void CheckBounds(PatchCtx ctx, GItem i)
+        {
+            if (i.Params == null) return;
+            foreach (string path in ctx.Paths(GameModel.PvFiles))
+                foreach (string name in i.Params)
+                    foreach (Match mm in GameModel.ParamRx(name).Matches(ctx.Get(path)))
+                    {
+                        double x = Txt.D(mm.Groups[2].Value);
+                        if ((!double.IsNaN(i.Lo) && x < i.Lo - 1e-9) || (!double.IsNaN(i.Hi) && x > i.Hi + 1e-9))
+                            throw new InvalidDataException(i.Label + ": ergibt in " + System.IO.Path.GetFileName(path) + " den Wert "
+                                + x.ToString(Txt.Inv) + ", erlaubt ist " + i.Lo.ToString(Txt.Inv) + " bis " + i.Hi.ToString(Txt.Inv) + ".");
+                    }
         }
 
         static void ApplyCraft(PatchCtx ctx, GameModel m, string famId, object val)
@@ -122,9 +149,9 @@ namespace Dero
                 var o = Json.Obj(tiers[ti]);
                 object[] mats = o == null ? null : Json.Arr(o.ContainsKey("mats") ? o["mats"] : null);
                 if (mats == null || mats.Length != t.Mats.Count) throw new InvalidDataException("Ungültige Materialien bei " + famId);
-                var newMats = mats.Select((x, j) => (int)Num(x, famId, 0, 999)).ToList();
+                var newMats = mats.Select((x, j) => Int(x, famId, 0, 999)).ToList();
                 if (newMats.All(x => x == 0)) throw new InvalidDataException(f.Name + ": Mindestens ein Material muss mehr als 0 kosten.");
-                int outN = (int)Num(o.ContainsKey("out") ? o["out"] : null, famId, 1, 999);
+                int outN = Int(o.ContainsKey("out") ? o["out"] : null, famId, 1, 999);
                 object hv = o.ContainsKey("head") ? o["head"] : null;
                 double? head = hv == null ? (double?)null : Num(hv, famId, 0.5, 20);
 
@@ -263,7 +290,13 @@ namespace Dero
             public string Path, Code;
             public bool Legacy;
             public Dictionary<string, object> Diff;
+            public string Foreign;   // gesetzt, wenn die Pak nicht vollstaendig vom DERO-Patcher stammt -> nie ersetzen oder loeschen
         }
+
+        // Sicherungen ersetzter/entfernter Mod-Paks (null = keine, z. B. im Selbsttest)
+        public static string BackupDir;
+        const int KeepBackups = 20;
+        static readonly Regex SlotName = new Regex(@"^data([2-7])\.pak$", RegexOptions.IgnoreCase);
 
         static IEnumerable<string> ModPaks(string sourceDir)
         {
@@ -278,28 +311,79 @@ namespace Dero
         {
             foreach (string f in ModPaks(sourceDir))
             {
-                try
-                {
-                    string l1 = null, l2 = null;
-                    using (ZipArchive z = ZipFile.OpenRead(f))
-                    {
-                        ZipArchiveEntry e = z.Entries.FirstOrDefault();
-                        if (e == null) continue;
-                        using (var r = new StreamReader(e.Open(), Txt.Latin1))
-                        {
-                            l1 = r.ReadLine();
-                            l2 = r.ReadLine();
-                        }
-                    }
-                    if (l1 == null || !l1.StartsWith(Marker, StringComparison.Ordinal)) continue;
-                    var res = new Installed { Path = f, Legacy = l1.StartsWith("// DERO-WurfPatcher", StringComparison.Ordinal), Code = ModCode(File.ReadAllBytes(f)) };
-                    if (l2 != null && l2.StartsWith(SettingsPrefix, StringComparison.Ordinal))
-                        try { res.Diff = Json.ParseObject(l2.Substring(SettingsPrefix.Length)); } catch { }
-                    return res;
-                }
-                catch { }
+                Installed res = Inspect(f);
+                if (res != null) return res;
             }
             return null;
+        }
+
+        // null = gueltiges Archiv ohne DERO-Datei. Sonst muss JEDE Datei im Archiv vom DERO-Patcher stammen
+        // (Kopfzeile, bekanntes Skript, alle mit denselben Einstellungen) - sonst ist Foreign gesetzt.
+        // bytes: bereits gelesener Inhalt (Pruefung und spaeteres Ersetzen beziehen sich dann auf genau diese Bytes).
+        public static Installed Inspect(string f, byte[] bytes = null)
+        {
+            try
+            {
+                var foreign = new List<string>();
+                int own = 0;
+                bool legacy = false, mixed = false;
+                string settings = null;
+                using (Stream st = bytes != null ? (Stream)new MemoryStream(bytes, false) : File.OpenRead(f))
+                using (var z = new ZipArchive(st, ZipArchiveMode.Read))
+                    foreach (ZipArchiveEntry e in z.Entries)
+                    {
+                        string name = e.FullName.Replace('\\', '/');
+                        string l1 = null, l2 = null;
+                        if (!name.EndsWith("/"))
+                            using (var r = new StreamReader(e.Open(), Txt.Latin1))
+                            {
+                                l1 = r.ReadLine();
+                                l2 = r.ReadLine();
+                            }
+                        if (l1 == null || !l1.StartsWith(Marker, StringComparison.Ordinal) || !GameFiles.Needed.IsMatch(name)) { foreign.Add(name); continue; }
+                        bool leg = l1.StartsWith("// DERO-WurfPatcher", StringComparison.Ordinal);
+                        if (own++ == 0) { legacy = leg; settings = l2; }
+                        else if (leg != legacy || (!leg && l2 != settings)) mixed = true;
+                    }
+                if (own == 0) return null;
+                var res = new Installed { Path = f, Legacy = legacy, Code = ModCode(bytes ?? File.ReadAllBytes(f)) };
+                if (!legacy && settings != null && settings.StartsWith(SettingsPrefix, StringComparison.Ordinal))
+                    try { res.Diff = Json.ParseObject(settings.Substring(SettingsPrefix.Length)); } catch { }
+                if (foreign.Count > 0)
+                    res.Foreign = "enthält auch fremde Dateien (" + string.Join(", ", foreign.Take(3).Select(x => System.IO.Path.GetFileName(x.TrimEnd('/')))) + (foreign.Count > 3 ? ", …" : "") + ")";
+                else if (mixed) res.Foreign = "enthält Dateien aus verschiedenen Patches";
+                else if (!legacy && res.Diff == null) res.Foreign = "die gespeicherten Einstellungen fehlen oder sind beschädigt";
+                return res;
+            }
+            // Beschaedigt, gesperrt oder nicht lesbar: koennte unsere sein. Nicht einfach einen anderen Platz nehmen
+            // (sonst doppelte Mods), sondern anhalten.
+            catch (InvalidDataException) { return new Installed { Path = f, Foreign = "ist kein lesbares Archiv (beschädigt?)" }; }
+            catch (Exception ex) { return new Installed { Path = f, Foreign = "konnte nicht gelesen werden (" + ex.Message.TrimEnd('.') + ")" }; }
+        }
+
+        // Namensregeln fuer jede Datei, die das Tool schreibt oder loescht. Windows schneidet Punkte/Leerzeichen am Ende ab
+        // ("data0.pak." -> data0.pak) und liest ":" als Datenstrom, deshalb beides ablehnen statt normalisieren.
+        public static void CheckName(string target)
+        {
+            string name = System.IO.Path.GetFileName(target) ?? "";
+            if (name.Length == 0 || name != name.TrimEnd('.', ' ') || name.IndexOf(':') >= 0)
+                throw new InvalidDataException("Ungültiger Dateiname: „" + name + "“.");
+            if (name.StartsWith("data", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".pak", StringComparison.OrdinalIgnoreCase) && !SlotName.IsMatch(name))
+                throw new InvalidDataException(name + " ist eine Originaldatei des Spiels und wird nie verändert.");
+        }
+
+        // Liest eine vorhandene Zieldatei einmal und prueft, dass sie vollstaendig vom DERO-Patcher stammt.
+        // null = Datei gibt es nicht. Nie Originaldateien, nie fremde Mods.
+        static byte[] ReadOwned(string target)
+        {
+            CheckName(target);
+            if (!File.Exists(target)) return null;
+            byte[] b = File.ReadAllBytes(target);
+            string name = System.IO.Path.GetFileName(target);
+            Installed own = Inspect(target, b);
+            if (own == null) throw new InvalidDataException(name + " stammt nicht vom DERO-Patcher und wird nicht angefasst.");
+            if (own.Foreign != null) throw new InvalidDataException(name + " " + own.Foreign + " und wird deshalb nicht angefasst.");
+            return b;
         }
 
         // Andere Mods, die dieselben Dateien aendern wie wir (einer ueberschreibt den anderen)
@@ -330,12 +414,109 @@ namespace Dero
             return null;
         }
 
+        // Schreibt die Mod-Pak. Ablauf bei einer vorhandenen Datei:
+        //  1. einmal lesen und pruefen (ReadOwned), genau diese Bytes sichern
+        //  2. neue Datei unter einem zufaelligen Namen exklusiv anlegen (nie eine fremde .tmp oder einen Hardlink beschreiben)
+        //  3. File.Replace mit eigener Ruecksicherung neben dem Ziel; scheitert der Tausch, wird sie zurueckgelegt
+        //  4. war die ersetzte Datei nicht mehr die gepruefte (anderes Programm dazwischen), wird sie zurueckgelegt
         public static void WriteFile(string target, byte[] data)
         {
-            string tmp = target + ".tmp";
-            File.WriteAllBytes(tmp, data);
-            if (File.Exists(target)) File.Delete(target);
-            File.Move(tmp, target);
+            CheckName(target);   // vor GetFullPath: das schneidet Punkte/Leerzeichen am Ende ab
+            target = System.IO.Path.GetFullPath(target);
+            byte[] old = ReadOwned(target);
+            if (old != null && old.SequenceEqual(data)) return;
+            string name = System.IO.Path.GetFileName(target);
+            string tmp = CreateNew(target, ".neu", data), bak = null;
+            bool keepTmp = false;
+            try
+            {
+                if (old == null) { File.Move(tmp, target); return; }   // scheitert, falls inzwischen eine Datei da ist
+                Backup(name, old);
+                bak = FreeName(target, ".alt");
+                try { File.Replace(tmp, target, bak, true); }
+                catch
+                {
+                    // ReplaceFile kann das Ziel schon umbenannt haben (Fehler 1177): zuruecklegen
+                    if (!File.Exists(target) && File.Exists(bak)) try { File.Move(bak, target); } catch { }
+                    if (!File.Exists(target)) keepTmp = true;   // Zustand unklar: nichts weiter loeschen
+                    else bak = null;
+                    throw;
+                }
+                if (!File.ReadAllBytes(bak).SequenceEqual(old))
+                {
+                    File.Replace(bak, target, null, true);
+                    bak = null;
+                    throw new InvalidDataException(name + " wurde während des Patchens von einem anderen Programm geändert. Das Tool hat sie zurückgelegt und nichts ersetzt.");
+                }
+            }
+            finally
+            {
+                if (!keepTmp)
+                {
+                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                    try { if (bak != null && File.Exists(bak) && File.Exists(target)) File.Delete(bak); } catch { }
+                }
+            }
+        }
+
+        // Entfernt die eigene Mod-Pak (vorher gesichert). Erst umbenennen, dann pruefen, ob es noch die gepruefte ist.
+        public static void RemoveFile(string target)
+        {
+            CheckName(target);   // vor GetFullPath: das schneidet Punkte/Leerzeichen am Ende ab
+            target = System.IO.Path.GetFullPath(target);
+            byte[] old = ReadOwned(target);
+            if (old == null) return;
+            string name = System.IO.Path.GetFileName(target);
+            Backup(name, old);
+            string q = FreeName(target, ".entfernt");
+            File.Move(target, q);
+            if (!File.ReadAllBytes(q).SequenceEqual(old))
+            {
+                File.Move(q, target);
+                throw new InvalidDataException(name + " wurde während des Entfernens von einem anderen Programm geändert. Das Tool hat sie zurückgelegt.");
+            }
+            File.Delete(q);
+        }
+
+        // Freier Name neben dem Ziel, z. B. data2.pak.3f9a1c2b.alt (endet nicht auf .pak, wird also vom Spiel nicht geladen)
+        static string FreeName(string target, string ext)
+        {
+            string p;
+            do p = target + "." + Guid.NewGuid().ToString("N").Substring(0, 8) + ext;
+            while (File.Exists(p));
+            return p;
+        }
+
+        static string CreateNew(string target, string ext, byte[] data)
+        {
+            for (int i = 0; ; i++)
+            {
+                string p = FreeName(target, ext);
+                try
+                {
+                    using (var fs = new FileStream(p, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+                        fs.Write(data, 0, data.Length);
+                    return p;
+                }
+                catch (IOException) { if (i >= 5 || !File.Exists(p)) throw; }   // Name war doch belegt: neuer Versuch
+            }
+        }
+
+        static void Backup(string name, byte[] data)
+        {
+            if (BackupDir == null) return;
+            Directory.CreateDirectory(BackupDir);
+            // Millisekunden + Zaehler: zwei Sicherungen kurz hintereinander duerfen sich nicht ueberschreiben
+            string stamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff", Txt.Inv);
+            for (int n = 1; ; n++)
+            {
+                string dest = System.IO.Path.Combine(BackupDir, stamp + (n == 1 ? "" : "-" + n) + "_" + name);
+                if (File.Exists(dest)) continue;
+                using (var fs = new FileStream(dest, FileMode.CreateNew, FileAccess.Write)) fs.Write(data, 0, data.Length);
+                break;
+            }
+            foreach (FileInfo f in new DirectoryInfo(BackupDir).GetFiles("*.pak").OrderByDescending(x => x.Name, StringComparer.Ordinal).Skip(KeepBackups))
+                try { f.Delete(); } catch { }
         }
 
         public static bool GameRunning()

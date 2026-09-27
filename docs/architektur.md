@@ -25,13 +25,13 @@ Eine `.exe` ohne Installation, gebaut mit `csc.exe` aus .NET Framework 4 (C# 5).
 
 | Anfrage | Zweck |
 |---|---|
-| `GET /api/state` | Version, Spielordner, Daten, installierte Mod (`pak, code, diff, legacy, outdated`), Konflikte, `running` |
-| `POST /api/preview {diff}` | baut die Pak im Speicher und liefert Mod-Code und Dateiliste, ohne etwas zu schreiben. Die UI ruft das 250 ms nach jeder Änderung auf |
-| `POST /api/patch {diff}` | schreibt die Pak (Spiel darf nicht laufen). Nutzt den Platz der eigenen Pak, sonst `data2`–`data7` |
-| `POST /api/remove` | löscht die eigene Pak |
+| `GET /api/state` | Version, `dataVersion`, Spielordner, Daten, installierte Mod (`pak, code, diff, legacy, outdated` bzw. `pak, foreign`), Konflikte, `running` |
+| `POST /api/preview {diff, dataVersion}` | baut die Pak im Speicher und liefert Mod-Code und Dateiliste, ohne etwas zu schreiben. Die UI ruft das 250 ms nach jeder Änderung auf |
+| `POST /api/patch {diff, dataVersion}` | schreibt die Pak (Spiel darf nicht laufen). Nutzt den Platz der eigenen Pak, sonst `data2`–`data7` |
+| `POST /api/remove` | sichert und löscht die eigene Pak (nicht, wenn sie Fremdes enthält) |
 | `POST /api/browse` | Ordnerauswahl, lädt das Spiel neu |
 | `GET /api/update[?force=1]`, `POST /api/update` | Update prüfen (10 min Cache) bzw. installieren und neu starten |
-| `POST /api/ping`, `POST /api/bye` | Heartbeat |
+| `POST /api/ping`, `POST /api/bye` | Heartbeat. `ping` prüft außerdem auf ein Spiel-Update und liefert `dataVersion` |
 
 ### Einstellungen, Katalog, Patchen
 
@@ -52,8 +52,31 @@ Eine `.exe` ohne Installation, gebaut mit `csc.exe` aus .NET Framework 4 (C# 5).
   // DERO-Patcher - automatisch erzeugt, bitte nicht von Hand bearbeiten
   // DERO-Einstellungen: {kanonisches JSON des Diffs}
   ```
-  Daran erkennt das Tool die eigene Pak und stellt nach dem Start die installierten Werte wieder her. Das Präfix `// DERO-` erkennt auch v1-Paks (`// DERO-WurfPatcher v1.0`). Diese gelten als „alte Version“ und werden beim ersten Patchen auf demselben Platz ersetzt.
+  Daran erkennt das Tool die eigene Pak und stellt nach dem Start die installierten Werte wieder her (Prüfung siehe „Dateisicherheit“). Das Präfix `// DERO-` erkennt auch v1-Paks (`// DERO-WurfPatcher v1.0`). Diese gelten als „alte Version“ und werden beim ersten Patchen auf demselben Platz ersetzt.
 - **Veraltet-Erkennung:** Das Tool wendet den gespeicherten Diff auf das aktuelle `data0.pak` an und vergleicht die MD5-Werte. Weichen sie ab, erscheint ein Hinweis „Mod ist veraltet – neu patchen“.
+
+### Dateisicherheit (zwei externe Reviews 2026-09-27, umgesetzt in v2.1.0)
+
+- **Grenzen nach Skalierung und Rundung:** Ein `GItem` kann `Lo`/`Hi` und `Params` haben. `ParamApply` klemmt jeden geschriebenen Wert (alle Schwierigkeiten, Perma-World) auf diese Grenzen, `Patcher.CheckBounds` prüft danach alle Zeilen und bricht sonst ab. Selbstheilung: 1–100 (Leicht hat 40 statt 34 % und wäre bei 100 % sonst 118 %). Munitionsplätze: bis 100 (Kommentar `limited max is 100` im Skript). Inventarplätze und Stapelgrößen: Minimum ist der Originalwert. `Patcher.Num` lehnt `NaN`/`Infinity` vor jedem Vergleich ab (der JSON-Parser akzeptiert sie, und an ihnen scheitert jeder Bereichsvergleich). Rezeptmengen müssen ganze Zahlen sein (`Patcher.Int`).
+- **Eigentumserkennung (`Patcher.Inspect`):** Eine Pak gilt nur als eigene, wenn *jeder* Eintrag mit `// DERO-` beginnt, zu `GameFiles.Needed` passt und alle dieselben Einstellungen tragen. Sonst ist `Foreign` gesetzt, und Patchen/Entfernen werden abgelehnt. Eine gesperrte, unlesbare oder beschädigte Pak (kein gültiges ZIP) gilt ebenfalls als `Foreign`, damit das Tool nicht auf einen anderen Platz ausweicht und zwei DERO-Mods entstehen. `null` heißt nur noch: gültiges Archiv ohne DERO-Inhalt.
+- **Namensregeln (`CheckName`)**, geprüft am Namen *vor* `GetFullPath` (das schneidet Punkte und Leerzeichen am Ende ab): kein `.`/Leerzeichen am Ende, kein `:` (Datenstrom), nie `data0.pak`, `data1.pak` oder andere `data*.pak` außerhalb von `data2`–`data7`. Gilt auch für `--selftest`.
+- **Eigentum (`ReadOwned`):** Eine vorhandene Zieldatei wird *einmal* gelesen. Prüfung, Sicherung und der spätere Vergleich beziehen sich auf genau diese Bytes.
+- **Ersetzen (`WriteFile`):**
+  1. Neue Datei unter zufälligem Namen (`data2.pak.<zufall>.neu`) mit `FileMode.CreateNew` und `WriteThrough`. So wird nie eine vorhandene `.tmp` oder ein Hardlink beschrieben.
+  2. Gelesene Bytes nach `%LOCALAPPDATA%\DERO-Patcher\Sicherungen` (Zeitstempel mit Millisekunden, die letzten 20 bleiben).
+  3. `File.Replace` mit eigener Rücksicherung `data2.pak.<zufall>.alt` neben dem Ziel. Scheitert der Tausch und fehlt das Ziel danach (ReplaceFile-Fehler 1177), wird `.alt` zurückgelegt. Ist der Zustand danach unklar, bleiben `.neu` und `.alt` liegen, statt gelöscht zu werden.
+  4. Ist `.alt` nicht mehr byte-gleich mit der geprüften Datei (ein anderes Programm hat sie zwischendurch ersetzt), wird sie zurückgelegt und der Patch abgebrochen.
+  - Identischer Inhalt wird nicht neu geschrieben. Die Reste-Namen enden nicht auf `.pak`, das Spiel lädt sie also nicht.
+- **Entfernen (`RemoveFile`):** sichern, in `data2.pak.<zufall>.entfernt` umbenennen und vergleichen. Stimmt der Inhalt nicht, wird die Datei zurückgelegt, sonst gelöscht.
+- **`--selftest`** verweigert den Ordner des echten Spiels (Exit 3, es wird nichts geschrieben). Verglichen wird die Dateikennung von Windows (Volume-Seriennummer + Dateiindex über `GetFileInformationByHandle`), nicht der Pfad. So zählen auch Junctions, Symlinks und 8.3-Kurznamen. Ist sie nicht ermittelbar, gilt ebenfalls Exit 3.
+- **Spiel-Update bei offenem Tool:** `App.Refresh` vergleicht Größe und Änderungszeit von `data0/1.pak` und `datade/en.pak` mit dem Stand beim Laden und lädt bei Abweichung neu (`DataVersion++`). Aufgerufen bei `state`, `ping`, `preview` und `patch`.
+  - `LoadGame` nimmt den Stempel vor *und* nach dem Lesen. Weichen sie ab, gilt das Laden als gescheitert.
+  - Ein gescheitertes Laden (z. B. Datei während eines Updates gesperrt) wird spätestens nach 15 s wiederholt.
+  - `patch` prüft den Stempel nach dem Erzeugen der Pak erneut und antwortet bei einer Änderung mit `stale`, statt die alte Fassung zu installieren. Schickt die UI eine alte `dataVersion`, gibt es ebenfalls `stale`.
+  - Bei `stale` legt die UI ihre Einstellungen in `sessionStorage` ab und lädt neu. Beim Ping passiert das nur, wenn kein Dialog offen ist.
+  - Die Fehlerseite („Spieldaten gerade nicht lesbar“) fragt alle 5 s nach und öffnet die Oberfläche von selbst wieder. Die gemerkten Einstellungen bleiben bis dahin erhalten.
+- **Migration alter Einstellungen:** `validate(d, fixes)` arbeitet für gespeicherte Einstellungen (installierte Mod, Wiederherstellung) nachsichtig. Globale Werte außerhalb der Grenzen werden auf die Grenze gesetzt, anderes Ungültiges bleibt original, alle gültigen Werte bleiben erhalten. Jede Anpassung steht in einem Hinweis oben („Gespeicherte Einstellungen angepasst … neu patchen“). Teilen-Codes werden weiterhin streng geprüft.
+- **Spielstand:** „Mod entfernen“ löscht nur die Pak. Was mit dem Mod erspielt und gespeichert wurde, bleibt im Spielstand. Das Tool sagt das im Entfernen- und im Patchen-Dialog.
 
 ### Tests (2026-09-27)
 
@@ -63,6 +86,22 @@ Eine `.exe` ohne Installation, gebaut mit `csc.exe` aus .NET Framework 4 (C# 5).
   - Jede Datei hat dieselbe Zeilenzahl, CRLF bleibt erhalten.
   - Geändert sind nur die Zielzeilen (per Python-Diff geprüft).
 - **C#-Datenexport:** identisch mit dem früheren Python-Extraktor.
+- **v2.1.0 (Dateisicherheit), gegen die Spielkopie:**
+  - Alle 34 globalen Einstellungen je auf Min und Max: kein Fehler. „Alles gleichzeitig“: 22 Dateien, nur Zahlen in den Zielzeilen geändert. DERO weiter `ECC4-CE33`.
+  - Selbstheilung 100 %: Normal und Leicht 100, Schwer 74, Albtraum 59. Munition 999 und Inventar 1 werden abgelehnt, Munition 100 ergibt Perma-World 33.
+  - Ziel `data0.pak`/`data1.pak`, eine fremde Pak oder eine gemischte Pak (DERO + fremde Datei): abgelehnt, Dateien byte-gleich.
+  - v1-Pak wird als eigene erkannt und ersetzt. Gesperrte Ziel-Pak: `IOException`, alte Datei unverändert, keine `.tmp` übrig.
+  - Dev-Server: Zeitstempel von `data0.pak` geändert → `dataVersion` 1 → 2, Patch/Vorschau mit 1 → `stale`. Die UI lädt nach dem nächsten Ping neu und übernimmt die Einstellungen. Gemischte Pak: Hinweis in der UI, Patchen/Entfernen per API abgelehnt. Entfernen legt eine Sicherung an.
+- **v2.1.0, nach dem zweiten Review:**
+  - Hardlink `dero.pak.tmp` → Kopie von `data0.pak`: Die Kopie bleibt nach Neuanlage und Ersetzen byte-gleich, es bleiben keine `.neu`/`.alt`/`.entfernt` übrig.
+  - `data0.pak.`, `data1.pak `, `data8.pak.`, `dero.pak.` und `x.pak:strom`: abgelehnt, nichts angelegt.
+  - Abgeschnittene DERO-Pak in `data2`: als „kein lesbares Archiv“ gesperrt, Patchen per API abgelehnt.
+  - `NaN`, `Infinity` und Kommazahlen im Rezept: abgelehnt (per `--selftest` und per API).
+  - Verzeichniskennung: echter `source`-Ordner, eine Junction darauf und der 8.3-Kurzpfad ergeben dieselbe Kennung, die Spielkopie eine andere. Getestet nur lesend, ohne Schreibversuch im echten Spielordner.
+  - `data0.pak` geändert und gesperrt: Die UI wechselt auf die Fehlerseite und kommt nach der Freigabe innerhalb von etwa 20 s von selbst zurück, die geänderte Einstellung ist übernommen.
+  - Pak mit v2.0.1-Einstellungen (Munition 150, XP ×2, DERO-Wurfmesser): XP und Wurfmesser bleiben, Munition wird 100, der Hinweis erscheint. Nach dem Patchen: „✓ so installiert“.
+  - Regression unverändert: 34 × Min/Max ohne Fehler, „alles gleichzeitig“ `A6B4-A805`, DERO `ECC4-CE33`.
+  - Nicht getestet: der Wettlauf mit einem anderen Programm während `File.Replace` und der Fehlerfall 1177 (beides nur im Code nachvollzogen), FAT32.
 - **UI im Dev-Modus gegen die Spielkopie:**
   - v1-Mod erkannt.
   - Patchen ersetzt `data2.pak`.

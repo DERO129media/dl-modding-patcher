@@ -23,6 +23,8 @@ namespace Dero
         public static GameFiles Game;
         public static GameModel Model;
         public static string GameDir, LoadError;
+        // Zaehlt jedes Laden der Spieldaten. Die Oberflaeche schickt ihren Stand mit; weicht er ab, muss sie neu laden.
+        public static int DataVersion;
         public static Action RestartForUpdate;
 
         public static string DataDir
@@ -37,8 +39,56 @@ namespace Dero
 
         static string SettingsFile { get { return Path.Combine(DataDir, "settings.json"); } }
 
+        public static string BackupDir { get { return Path.Combine(DataDir, "Sicherungen"); } }
+
+        // Groesse + Zeitstempel der Quell-Paks beim Laden. Aendert Steam sie (Spiel-Update), wird neu geladen.
+        static string loadedStamp;
+
+        static string SourceStamp(string gameDir)
+        {
+            string src = GameFiles.ResolveSourceDir(gameDir);
+            if (src == null) return null;
+            var sb = new StringBuilder();
+            foreach (string rel in new[] { "data0.pak", "data1.pak", @"data_lang\datade.pak", @"data_lang\dataen.pak" })
+            {
+                var fi = new FileInfo(Path.Combine(src, rel));
+                sb.Append(rel).Append('=').Append(fi.Exists ? fi.Length + "@" + fi.LastWriteTimeUtc.Ticks : "-").Append(';');
+            }
+            return sb.ToString();
+        }
+
+        // Gescheitertes Laden (z. B. Datei kurz gesperrt) wird hoechstens alle RetrySeconds wiederholt
+        static DateTime failedAt = DateTime.MinValue;
+        const int RetrySeconds = 15;
+
+        // Liest die Spieldaten neu, wenn sich die Quell-Paks seit dem Laden geaendert haben oder das Laden gescheitert war.
+        // true = neu geladen
+        public static bool Refresh()
+        {
+            lock (Lock)
+            {
+                if (GameDir == null) return false;
+                string now;
+                try { now = SourceStamp(GameDir); } catch { return false; }
+                if (now == loadedStamp && (Model != null || (DateTime.Now - failedAt).TotalSeconds < RetrySeconds)) return false;
+                LoadGame(GameDir, false);
+                return true;
+            }
+        }
+
+        // false = die Quell-Paks haben sich seit dem Laden geaendert (Spiel-Update laeuft oder lief)
+        public static bool SourceUnchanged()
+        {
+            lock (Lock)
+            {
+                try { return GameDir != null && loadedStamp != null && SourceStamp(GameDir) == loadedStamp; }
+                catch { return false; }
+            }
+        }
+
         public static void Init(string gameDirOverride)
         {
+            Patcher.BackupDir = BackupDir;
             string dir = gameDirOverride;
             if (dir == null)
                 try { dir = Convert.ToString(Json.ParseObject(File.ReadAllText(SettingsFile))["gameDir"]); } catch { }
@@ -51,20 +101,31 @@ namespace Dero
             lock (Lock)
             {
                 GameDir = dir;
+                DataVersion++;
                 Game = null;
                 Model = null;
                 LoadError = null;
+                loadedStamp = null;
                 if (dir == null) { LoadError = "Spielordner nicht gefunden."; return; }
                 try
                 {
+                    // Stempel vor und nach dem Lesen: aendert Steam die Dateien waehrenddessen, ist der Stand nicht konsistent
+                    loadedStamp = SourceStamp(dir);
                     Game = GameFiles.Load(dir);
                     Model = GameModel.Build(Game);
+                    string after = SourceStamp(dir);
+                    if (after != loadedStamp)
+                    {
+                        loadedStamp = after;   // erst nach der naechsten Aenderung oder nach RetrySeconds erneut versuchen
+                        throw new IOException("Die Spieldateien haben sich während des Ladens geändert. Läuft gerade ein Steam-Update? Das Tool versucht es gleich noch einmal.");
+                    }
                     if (remember) File.WriteAllText(SettingsFile, Json.Write(Json.O("gameDir", dir)));
                 }
                 catch (Exception ex)
                 {
                     Game = null;
                     Model = null;
+                    failedAt = DateTime.Now;
                     LoadError = ex is DirectoryNotFoundException ? ex.Message
                         : "Die Spieldaten konnten nicht gelesen werden (evtl. hat ein Spiel-Update die Dateien verändert): " + ex.Message;
                 }
@@ -209,7 +270,7 @@ namespace Dero
                     case "POST /api/patch": return JsonBytes(Patch(Json.ParseObject(r.Body), ref status));
                     case "POST /api/remove": return JsonBytes(Remove(ref status));
                     case "POST /api/browse": return JsonBytes(Browse());
-                    case "POST /api/ping": LastPing = DateTime.Now; return JsonBytes(Json.O("ok", true));
+                    case "POST /api/ping": LastPing = DateTime.Now; App.Refresh(); return JsonBytes(Json.O("ok", true, "dataVersion", App.DataVersion));
                     case "POST /api/bye": ByeAt = DateTime.Now; return JsonBytes(Json.O("ok", true));
                     case "GET /api/update": return JsonBytes(UpdateCheck(r.Path.Contains("force=1")));
                     case "POST /api/update": return JsonBytes(UpdateInstall(ref status));
@@ -257,16 +318,30 @@ namespace Dero
             return d.Where(kv => { var x = Json.Obj(kv.Value); return x != null && x.Count > 0; }).ToDictionary(kv => kv.Key, kv => kv.Value);
         }
 
+        // Die Oberflaeche arbeitet mit dem Datenstand, den sie beim Laden bekommen hat. Hat Steam das Spiel inzwischen
+        // aktualisiert, darf weder Vorschau noch Patch mit alten Originalwerten weiterlaufen.
+        const string StaleMsg = "Das Spiel wurde gerade aktualisiert. Die Oberfläche lädt die neuen Spieldaten, deine Einstellungen bleiben erhalten.";
+
+        static bool Stale(Dictionary<string, object> body)
+        {
+            App.Refresh();
+            object v;
+            return body.TryGetValue("dataVersion", out v) && Convert.ToInt32(v) != App.DataVersion;
+        }
+
         Dictionary<string, object> State()
         {
+            App.Refresh();
             lock (App.Lock)
             {
-                var res = Json.O("version", App.Version, "dev", uiDir != null, "running", Running(),
+                var res = Json.O("version", App.Version, "dev", uiDir != null, "running", Running(), "dataVersion", App.DataVersion,
                     "game", Json.O("dir", App.GameDir, "found", App.Model != null, "error", App.LoadError));
                 if (App.Model == null) return res;
                 res["data"] = App.Model.Data;
                 Patcher.Installed inst = Patcher.FindInstalled(App.Game.SourceDir);
-                if (inst != null)
+                if (inst != null && inst.Foreign != null)
+                    res["installed"] = Json.O("pak", Path.GetFileName(inst.Path), "foreign", inst.Foreign);
+                else if (inst != null)
                 {
                     bool outdated = inst.Legacy || inst.Diff == null;
                     if (!outdated)
@@ -283,6 +358,7 @@ namespace Dero
         {
             lock (App.Lock)
             {
+                if (Stale(body)) return Json.O("error", StaleMsg, "stale", true);
                 if (App.Model == null) return Json.O("error", "Spiel nicht geladen");
                 var diff = DiffOf(body);
                 if (IsEmpty(diff)) return Json.O("code", null, "files", new string[0]);
@@ -299,6 +375,7 @@ namespace Dero
         {
             lock (App.Lock)
             {
+                if (Stale(body)) { status = 409; return Json.O("error", StaleMsg, "stale", true); }
                 if (App.Model == null) { status = 409; return Json.O("error", "Spiel nicht geladen"); }
                 if (Running()) { status = 409; return Json.O("error", "Das Spiel läuft noch. Bitte schließ es zuerst."); }
                 var diff = DiffOf(body);
@@ -307,15 +384,16 @@ namespace Dero
                 try { ctx = Patcher.Apply(App.Model, App.Game, diff); }
                 catch (InvalidDataException ex) { status = 409; return Json.O("error", ex.Message); }
                 byte[] pak = Patcher.BuildPak(ctx, diff);
+                // Hat Steam waehrend des Erzeugens aktualisiert, stammt die Pak aus der alten Fassung: nicht installieren
+                if (!App.SourceUnchanged()) { App.Refresh(); status = 409; return Json.O("error", StaleMsg, "stale", true); }
                 Patcher.Installed inst = Patcher.FindInstalled(App.Game.SourceDir);
+                if (inst != null && inst.Foreign != null) { status = 409; return Json.O("error", ForeignMsg(inst)); }
                 string target = inst != null ? inst.Path : Patcher.FreeSlot(App.Game.SourceDir);
                 if (target == null) { status = 409; return Json.O("error", "Alle Mod-Plätze (data2.pak bis data7.pak) sind schon belegt."); }
                 try { Patcher.WriteFile(target, pak); }
-                catch (UnauthorizedAccessException)
-                {
-                    status = 409;
-                    return Json.O("error", "Windows lässt das Tool nicht in den Spielordner schreiben. Schließ das Tool, klick mit rechts auf die .exe und wähle „Als Administrator ausführen“.");
-                }
+                catch (UnauthorizedAccessException) { status = 409; return Json.O("error", AdminMsg); }
+                catch (InvalidDataException ex) { status = 409; return Json.O("error", ex.Message); }
+                catch (IOException ex) { status = 409; return Json.O("error", "Die Mod-Datei konnte nicht geschrieben werden: " + ex.Message + " Die bisherige Datei ist unverändert."); }
                 return Json.O("ok", true, "pak", Path.GetFileName(target), "code", Patcher.ModCode(pak),
                     "files", ctx.Changed.Keys.Select(Path.GetFileName).ToList());
             }
@@ -329,10 +407,20 @@ namespace Dero
                 if (Running()) { status = 409; return Json.O("error", "Das Spiel läuft noch. Bitte schließ es zuerst."); }
                 Patcher.Installed inst = Patcher.FindInstalled(App.Game.SourceDir);
                 if (inst == null) return Json.O("ok", true);
-                try { File.Delete(inst.Path); }
-                catch (Exception ex) { status = 409; return Json.O("error", "Löschen fehlgeschlagen: " + ex.Message); }
+                if (inst.Foreign != null) { status = 409; return Json.O("error", ForeignMsg(inst)); }
+                try { Patcher.RemoveFile(inst.Path); }
+                catch (UnauthorizedAccessException) { status = 409; return Json.O("error", AdminMsg); }
+                catch (Exception ex) { status = 409; return Json.O("error", "Entfernen fehlgeschlagen: " + ex.Message); }
                 return Json.O("ok", true, "pak", Path.GetFileName(inst.Path));
             }
+        }
+
+        const string AdminMsg = "Windows lässt das Tool nicht in den Spielordner schreiben. Schließ das Tool, klick mit rechts auf die .exe und wähle „Als Administrator ausführen“.";
+
+        static string ForeignMsg(Patcher.Installed inst)
+        {
+            return Path.GetFileName(inst.Path) + " " + inst.Foreign + ". Das Tool fasst diese Datei deshalb nicht an. "
+                + "Stammt sie von dir, verschieb sie aus dem Spielordner (ph_ft\\source) und patche danach neu.";
         }
 
         Dictionary<string, object> Browse()

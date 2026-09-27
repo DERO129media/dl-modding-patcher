@@ -273,6 +273,9 @@ namespace Dero
         public Dictionary<string, object> Diff, Example;
         public string[] Files = { "player_variables*.scr" };
         public GApply Apply;
+        // Grenzen fuer jeden geschriebenen Wert (auch skalierte Schwierigkeiten/Perma-World), geprueft nach dem Runden
+        public double Lo = double.NaN, Hi = double.NaN;
+        public string[] Params;
 
         public Dictionary<string, object> ToJson()
         {
@@ -533,7 +536,7 @@ namespace Dero
         public static readonly Regex PvFiles = new Regex(@"^scripts/player/(player_variables\w*|perma_world/\w+)\.scr$", RegexOptions.IgnoreCase);
         static readonly string[][] DiffFiles = { new[] { "Normal", "" }, new[] { "Leicht", "_easy" }, new[] { "Schwer", "_hard" }, new[] { "Albtraum", "_nightmare" } };
 
-        static Regex ParamRx(string name)
+        public static Regex ParamRx(string name)
         {
             return new Regex(@"(?m)^([ \t]*Param\(\s*""" + Regex.Escape(name) + @"""\s*,\s*"")(-?[\d.]+)(""\s*\))");
         }
@@ -557,14 +560,24 @@ namespace Dero
         }
 
         // Aendert einen Param in allen player_variables-Dateien (inkl. Schwierigkeiten und Perma-World)
-        static GApply ParamApply(string mode, params string[] names)
+        static GApply ParamApply(string mode, params string[] names) { return ParamApply(mode, double.NaN, double.NaN, names); }
+
+        // lo/hi: Grenzen fuer jede Variante. Ganzzahlige Grenzen vor dem Runden anwenden ist gleichwertig zu danach.
+        static GApply ParamApply(string mode, double lo, double hi, params string[] names)
         {
             return delegate(PatchCtx ctx, double v, double o)
             {
                 foreach (string path in ctx.Paths(PvFiles))
                     foreach (string name in names)
-                        ctx.Replace(path, ParamRx(name), old => Transform(mode, old, v, o));
+                        ctx.Replace(path, ParamRx(name), old => Clamp(Transform(mode, old, v, o), lo, hi));
             };
+        }
+
+        public static double Clamp(double x, double lo, double hi)
+        {
+            if (!double.IsNaN(lo) && x < lo) x = lo;
+            if (!double.IsNaN(hi) && x > hi) x = hi;
+            return x;
         }
 
         public static double Transform(string mode, double old, double v, double o)
@@ -647,7 +660,8 @@ namespace Dero
                     Apply = BlockValues("scripts/healingdefinitions.scr", "HealingHps", potionNames, "scale") },
                 new GItem { Id = "MaxAutoRegenHealthPercent", Label = "Heilt sich selbst bis", Value = PV("MaxAutoRegenHealthPercent"), Fmt = "pctv",
                     Sub = "Prozent der Lebensenergie ohne Medkit", Min = 10, Max = 100, Step = 1, Diff = DiffNote("MaxAutoRegenHealthPercent"),
-                    Apply = ParamApply("scale", "MaxAutoRegenHealthPercent") },
+                    Lo = 1, Hi = 100, Params = new[] { "MaxAutoRegenHealthPercent" },
+                    Apply = ParamApply("scale", 1, 100, "MaxAutoRegenHealthPercent") },
                 new GItem { Id = "HealthRegenerationDelay", Label = "Selbstheilung startet nach", Value = PV("HealthRegenerationDelay"), Fmt = "s",
                     Min = 0, Max = 20, Step = 0.5, Diff = DiffNote("HealthRegenerationDelay"), Apply = ParamApply("scale", "HealthRegenerationDelay") },
             });
@@ -689,9 +703,14 @@ namespace Dero
             foreach (string[] s in new[] { new[] { "EquipmentSlotsCount", "Ausrüstungsplätze" }, new[] { "ConsumableSlotsCount", "Verbrauchsplätze" },
                 new[] { "QuickSlotsCount", "Schnellzugriff" }, new[] { "AmmoSlotsCount", "Munitionsplätze" },
                 new[] { "StorageEquipmentSlotsCount", "Lager: Ausrüstung" }, new[] { "StorageOtherSlotsCount", "Lager: Sonstiges" } })
-                // "scale": Perma-World hat eigene (kleinere) Werte, die im gleichen Verhaeltnis mitwachsen
-                inv.Add(new GItem { Id = s[0], Label = s[1], Value = PV(s[0]), Ctl = "step", Fmt = "n", Group = "Plätze",
-                    Min = 1, Max = 999, Step = 1, Apply = ParamApply("scale", s[0]) });
+            {
+                // "scale": Perma-World hat eigene (kleinere) Werte, die im gleichen Verhaeltnis mitwachsen.
+                // Nur vergroessern: weniger Plaetze als belegt koennten Gegenstaende im Spielstand kosten (ungeprueft).
+                // Munition: im Skript steht "limited max is 100".
+                double max = s[0] == "AmmoSlotsCount" ? 100 : 999, orig = PV(s[0]);
+                inv.Add(new GItem { Id = s[0], Label = s[1], Value = orig, Ctl = "step", Fmt = "n", Group = "Plätze",
+                    Min = orig, Max = max, Step = 1, Lo = 1, Hi = max, Params = new[] { s[0] }, Apply = ParamApply("scale", 1, max, s[0]) });
+            }
             var stackCnt = StackCounts();
             foreach (var st in new[] {
                 new[] { "stack_throw", "Wurfwaffen", "CategoryType_Throwable", "CategoryType_ThrowableLiquid" }, new[] { "stack_medkit", "Medkits", "CategoryType_Medkit" },
@@ -704,10 +723,10 @@ namespace Dero
                 int baseVal = c0.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key).First().Key;
                 int n = cats.Sum(c => stackCnt.ContainsKey(c) && stackCnt[c].ContainsKey(baseVal) ? stackCnt[c][baseVal] : 0);
                 inv.Add(new GItem { Id = st[0], Label = st[1], Value = baseVal, Ctl = "step", Fmt = "n", Mode = "set", Group = "Stapelgröße",
-                    Sub = n == 1 ? "gilt für 1 Gegenstand" : "gilt für " + n + " Gegenstände", Min = 1, Max = 9999, Step = baseVal < 100 ? 1 : 10,
+                    Sub = n == 1 ? "gilt für 1 Gegenstand" : "gilt für " + n + " Gegenstände", Min = baseVal, Max = 9999, Step = baseVal < 100 ? 1 : 10,
                     Files = new[] { "inventory*.scr" }, Apply = StackApply(cats, baseVal) });
             }
-            group("inv", "gear", "Inventar", "Plätze im Rucksack und Lager, und wie viel auf einen Platz passt.", inv.ToArray());
+            group("inv", "gear", "Inventar", "Plätze im Rucksack und Lager, und wie viel auf einen Platz passt. Lässt sich nur vergrößern, damit aus vollen Taschen nichts verschwindet.", inv.ToArray());
             return groups.Cast<object>().ToList();
         }
 

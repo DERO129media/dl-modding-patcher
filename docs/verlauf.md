@@ -21,6 +21,18 @@
   - Der User hat entschieden: Repo öffentlich, E-Mail in den Commits bleibt.
 - Repo veröffentlicht: https://github.com/DERO129media/dl-modding-patcher. **Release v2.0.0** per GitHub Action gebaut (20 s).
 - Updater end-to-end getestet: Eine Kopie mit Version 1.9.9 hat sich per `--update-now` von GitHub auf 2.0.0 aktualisiert (SHA256 geprüft), der zweite Lauf meldet „aktuell“. Der Neustart über die Oberfläche (Fenster schließen und neu öffnen) ist noch nicht live getestet.
+- Externes Code-Review (Astra) mit fünf Befunden zur Dateisicherheit, alle bestätigt und in **v2.1.0** umgesetzt: Grenzen nach dem Umrechnen, strenge Eigentumserkennung, Schutz der Originaldateien auch im `--selftest`, Sicherungen und ausfallsicheres Ersetzen, Neuladen bei einem Spiel-Update. Details in architektur.md → „Dateisicherheit“. Die Texte zu „Mod entfernen“ sagen jetzt, dass der Spielstand nicht zurückgesetzt wird.
+- Zweites Audit (Astra) mit 3 × P1 und 7 × P2 auf die v2.1.0-Fixes. Alle bestätigt und umgesetzt:
+  - Temp-Datei mit Zufallsnamen und `CreateNew`.
+  - Prüfung und Austausch auf dieselben Bytes gebunden, mit Rücksicherung und Wiederherstellung.
+  - `--selftest` vergleicht die Verzeichniskennung statt des Pfads.
+  - `NaN`/`Infinity` werden abgelehnt.
+  - Stale-Prüfung nach dem Erzeugen der Pak.
+  - Erneute Ladeversuche und eine Fehlerseite, die von selbst zurückkehrt.
+  - Namen mit Punkt am Ende werden abgelehnt.
+  - Beschädigte Paks werden gesperrt.
+  - Alte Einstellungen werden migriert.
+  - Selbst gefunden: Kommazahlen in Rezeptmengen wurden still abgeschnitten, jetzt abgelehnt.
 
 ## Nächster Schritt
 

@@ -377,10 +377,20 @@ async function api(path, body) {
   return j;
 }
 function noGame(server) {
-  document.querySelector(".main").innerHTML = `<div class="nogame"><h1>Spiel nicht gefunden</h1>
+  // Ordner da, aber Dateien gerade nicht lesbar (z. B. Steam-Update): kein „nicht gefunden“, das Tool versucht es selbst erneut
+  const busy = server.game.dir && server.game.error && !/nicht gefunden/.test(server.game.error);
+  document.querySelector(".main").innerHTML = `<div class="nogame"><h1>${busy ? "Spieldaten gerade nicht lesbar" : "Spiel nicht gefunden"}</h1>
     <p>${(server.game.error || "Der Spielordner wurde nicht automatisch gefunden.").replace(/</g, "&lt;")}</p>
-    <p>Wähle den Ordner <b>„Dying Light The Beast“</b> aus, normalerweise unter <code>Steam\\steamapps\\common</code>.</p>
+    <p>${busy ? "Das Tool versucht es alle paar Sekunden erneut und öffnet sich dann von selbst. Stimmt der Ordner nicht, wähle" : "Wähle"} den Ordner <b>„Dying Light The Beast“</b> aus, normalerweise unter <code>Steam\\steamapps\\common</code>.</p>
     <button class="btn primary" id="btnBrowse0"><span>Spielordner wählen</span></button><p class="err" id="browseErr"></p></div>`;
+  // Z. B. während eines Steam-Updates: Zustand weiter abfragen (hält auch den Heartbeat am Leben) und neu laden, sobald es geht.
+  // Gemerkte Einstellungen bleiben in sessionStorage, bis die Oberfläche wieder startet.
+  setInterval(async () => {
+    await api("/api/ping", {}).catch(() => {});
+    const s = await api("/api/state").catch(() => ({}));
+    if (s.data) location.reload();
+    else if (s.game && s.game.error) document.querySelector(".nogame p").textContent = s.game.error;
+  }, 5000);
   document.getElementById("btnBrowse0").onclick = async () => {
     const r = await api("/api/browse", {});
     if (r.ok && r.found) location.reload();
@@ -495,14 +505,25 @@ const PRESET_INFO = {
   big: ["Großzügig", "Halbe Rezeptkosten, doppelter Output und Loot, bessere Händlerpreise, mehr Platz, leichteres Überleben."],
 };
 
-// installed = { pak, code, diff, legacy, outdated } – die Mod-Datei im Spielordner (liefert die .exe)
+// installed = { pak, code, diff, legacy, outdated, foreign } – die Mod-Datei im Spielordner (liefert die .exe).
+// foreign: die Datei enthält auch Fremdes oder ist nicht lesbar – das Tool fasst sie dann nicht an.
 let installed = LIVE ? (SERVER.installed || null) : { pak: "data2.pak", legacy: false, outdated: false };
 let S = PRESETS.dero();
-if (installed && installed.diff && !installed.legacy) { try { S = validate(installed.diff); } catch {} }
+// Werte, die an die Grenzen dieser Version angepasst wurden (z. B. Mod aus einer älteren Version): Hinweis oben
+let FIXES = [];
+if (installed && installed.diff && !installed.legacy) { try { S = validate(installed.diff, FIXES); } catch {} }
+// Nach einem Spiel-Update lädt die Seite neu; die Einstellungen von vorher liegen in sessionStorage
+const RESTORE_KEY = "dero-restore";
+let restored = null;
+try { restored = sessionStorage.getItem(RESTORE_KEY); sessionStorage.removeItem(RESTORE_KEY); } catch {}
+if (restored) {
+  FIXES = [];
+  try { S = validate(JSON.parse(restored), FIXES); restored = "ok"; } catch { restored = "bad"; }
+}
 if (!LIVE) { installed.diff = diff(); installed.code = fnvCode(installed.diff); }
 // Stabiler Vergleich unabhängig von der Schlüssel-Reihenfolge
 const stable = o => JSON.stringify(o, (k, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(x => [x, v[x]])) : v);
-const isInstalled = () => !!installed && !installed.legacy && !installed.outdated && stable(installed.diff || {}) === stable(diff());
+const isInstalled = () => !!installed && !installed.foreign && !installed.legacy && !installed.outdated && stable(installed.diff || {}) === stable(diff());
 const ui = { sec: "glob", cat: "all", gchip: "all", q: "", only: false, tier: {}, split: {} };
 
 function changes(st = S) {
@@ -742,7 +763,8 @@ function modCode() {
   if (preview.key === key) return preview.code;
   clearTimeout(previewTimer);
   previewTimer = setTimeout(async () => {
-    const r = await api("/api/preview", { diff: d }).catch(() => ({ error: "Keine Verbindung zum Tool" }));
+    const r = await api("/api/preview", { diff: d, dataVersion: SERVER.dataVersion }).catch(() => ({ error: "Keine Verbindung zum Tool" }));
+    if (r.stale) return reloadForGameUpdate();
     preview = { key, code: r.code || null, files: r.files || [], error: r.error || null };
     if (stable(diff()) === key) renderChrome();
   }, 250);
@@ -753,7 +775,12 @@ function banners() {
   const b = [];
   if (ui.update) b.push(`<div class="banner upd"><span class="ic">↑</span><div><b>Update verfügbar: Version ${esc(ui.update.latest)}</b> · du hast ${esc(ui.update.current)}</div>
     <button class="btn" data-open-update="1">Ansehen</button></div>`);
-  if (installed && (installed.legacy || installed.outdated)) {
+  if (installed && installed.foreign) b.push(`<div class="banner warn"><span class="ic">!</span><div><b>${esc(installed.pak)} wird nicht angefasst</b> – sie ${esc(installed.foreign)}.
+    Patchen und Entfernen sind gesperrt, damit nichts Fremdes verloren geht. Stammt sie von dir, verschieb sie aus dem Spielordner.</div></div>`);
+  else if (FIXES.length) b.push(`<div class="banner warn"><span class="ic">!</span><div><b>Gespeicherte Einstellungen angepasst</b> – ${FIXES.length === 1 ? "ein Wert passte" : FIXES.length + " Werte passten"} nicht zu den Grenzen dieser Version:
+    ${esc(FIXES.slice(0, 4).join(" · "))}${FIXES.length > 4 ? " …" : ""}. Bitte prüfen und neu patchen (im Koop beide).</div>
+    <button class="btn" data-patch-now="1">Jetzt patchen</button></div>`);
+  else if (installed && (installed.legacy || installed.outdated)) {
     const why = installed.legacy ? `<b>Alte Version installiert</b> – ${esc(installed.pak)} stammt noch vom WurfPatcher v1.`
       : `<b>Mod ist veraltet</b> – das Spiel wurde seit dem letzten Patchen aktualisiert.`;
     b.push(`<div class="banner warn"><span class="ic">!</span><div>${why} Einmal neu patchen, dann passt alles (im Koop beide).</div>
@@ -783,11 +810,13 @@ function renderChrome() {
     : installed ? `<span class="pend">Mod ist noch installiert</span>` : `Kein Mod nötig`;
   const dir = LIVE ? SERVER.game.dir : "…\\steamapps\\common\\Dying Light The Beast";
   $("#status").innerHTML = `<div class="row"><div class="dot"></div><div><b>Spiel gefunden</b><code title="${esc(dir)}">${esc(shortDir(dir))}</code>${LIVE ? `<br><button class="linkbtn" id="btnBrowse">Ordner ändern</button>` : ""}</div></div>`
-    + (installed
+    + (installed && installed.foreign
+      ? `<div class="row"><div class="dot mod"></div><div><b>Unbekannter Inhalt · ${esc(installed.pak)}</b><span class="warn">Wird nicht angefasst.</span></div></div>`
+      : installed
       ? `<div class="row"><div class="dot mod"></div><div><b>${installed.legacy ? "Alte Version" : "Mod aktiv"} · ${esc(installed.pak)}</b>${installed.legacy || installed.outdated
           ? `<span class="warn">Bitte einmal neu patchen.</span>` : `Mod-Code ${esc(installed.code || "")}`}<br><button class="linkbtn" id="btnRemove">Mod entfernen</button></div></div>`
       : `<div class="row"><div class="dot off"></div><div><b>Kein Mod installiert</b>Das Spiel läuft mit Originaldaten.</div></div>`)
-    + `<div class="note">Originaldateien werden nie verändert. Der Mod ist eine eigene Datei.</div>`
+    + `<div class="note">Originaldateien werden nie verändert. Der Mod ist eine eigene Datei, die vorige wird vor jedem Ersetzen gesichert.</div>`
     + `<div class="ver"><span>Version ${esc(VERSION)}</span>${LIVE ? `<button id="btnCheckUpd">Nach Updates suchen</button>` : ""}</div>`;
   $("#banners").innerHTML = banners();
   $("#proto").hidden = LIVE;
@@ -904,21 +933,31 @@ async function decodeShare(raw) {
   const wrapped = json && typeof json === "object" && "d" in json && "v" in json;
   return { s: validate(wrapped ? json.d : json), ver: wrapped ? String(json.v) : null };
 }
-function validate(d) {
+// fixes = Array: nachsichtig für gespeicherte Einstellungen (installierte Mod, nach Spiel-Update). Globale Werte außerhalb
+// der Grenzen werden auf die Grenze gesetzt, anderes Ungültiges bleibt original. Jede Anpassung landet in fixes.
+// Ohne fixes (Teilen-Code): jeder Fehler bricht ab.
+function validate(d, fixes) {
   if (!d || typeof d !== "object" || Array.isArray(d)) throw "Der Code ist beschädigt.";
   const s = clone(ORIG), inR = (v, lo, hi) => typeof v === "number" && isFinite(v) && v >= lo && v <= hi;
+  const bad = (msg, what) => { if (!fixes) throw msg; fixes.push(what); };
   for (const k in d) {
-    if (!(k in s) || !d[k] || typeof d[k] !== "object") throw `Unbekannter Bereich „${k}“. Ist der Code von einer anderen Tool-Version?`;
+    if (!(k in s) || !d[k] || typeof d[k] !== "object") { bad(`Unbekannter Bereich „${k}“. Ist der Code von einer anderen Tool-Version?`, `Bereich „${k}“ (unbekannt, weggelassen)`); continue; }
     for (const id in d[k]) {
-      if (!(id in s[k])) throw `Unbekannter Wert „${id}“. Passt der Code zu dieser Spielversion?`;
+      if (!(id in s[k])) { bad(`Unbekannter Wert „${id}“. Passt der Code zu dieser Spielversion?`, `„${id}“ (unbekannt, weggelassen)`); continue; }
       const v = d[k][id], o = s[k][id];
+      if (fixes && k === "glob" && typeof v === "number" && isFinite(v) && !inR(v, GITEMS[id].min, GITEMS[id].max)) {
+        const g = GITEMS[id], nv = Math.min(g.max, Math.max(g.min, v));
+        fixes.push(`${g.label}: ${num(v, 2)} → ${num(nv, 2)}`);
+        if (nv !== o) s[k][id] = nv;
+        continue;
+      }
       const ok = k === "glob" ? inR(v, GITEMS[id].min, GITEMS[id].max)
         : k === "craft" ? Array.isArray(v) && v.length === o.length && v.every((t, i) => t && Array.isArray(t.mats) && t.mats.length === o[i].mats.length
             && t.mats.every(m => Number.isInteger(m) && inR(m, 0, 999)) && Number.isInteger(t.out) && inR(t.out, 1, 999)
             && (o[i].head == null ? t.head == null : inR(t.head, 0.5, 20)))
         : k === "trade" ? (id === "buy" ? inR(v, 0.25, 2) : inR(v, 0, 1))
         : inR(v, 0.5, 5);
-      if (!ok) throw `Ungültiger Wert bei „${id}“.`;
+      if (!ok) { bad(`Ungültiger Wert bei „${id}“.`, `„${k === "glob" ? GITEMS[id].label : k === "craft" ? FAM[id].name : id}“ (ungültig, auf Original)`); continue; }
       s[k][id] = v;
     }
   }
@@ -983,8 +1022,9 @@ function patchFiles(c) {
 function openPatch() {
   const c = changes(), n = total(c);
   if (!n) {
-    $("#patchBody").innerHTML = `<p>Alles steht auf Original – es gibt nichts zu patchen.</p>${installed ? `<p>Es ist aber noch ein Mod installiert (${esc(installed.pak)}). Entferne ihn, damit das Spiel wieder komplett original ist.</p>` : ""}`;
-    $("#patchActs").innerHTML = `<button class="btn" data-close>Schließen</button>${installed ? `<button class="btn danger" id="btnRemove2">Mod entfernen</button>` : ""}`;
+    const canRemove = installed && !installed.foreign;
+    $("#patchBody").innerHTML = `<p>Alles steht auf Original – es gibt nichts zu patchen.</p>${canRemove ? `<p>Es ist aber noch ein Mod installiert (${esc(installed.pak)}). Entferne ihn, damit das Spiel wieder mit den Originaldaten läuft.</p>` : ""}`;
+    $("#patchActs").innerHTML = `<button class="btn" data-close>Schließen</button>${canRemove ? `<button class="btn danger" id="btnRemove2">Mod entfernen</button>` : ""}`;
   } else {
     const code = modCode();
     const target = installed ? esc(installed.pak) : "eine eigene Mod-Datei (data2.pak bis data7.pak)";
@@ -993,7 +1033,7 @@ function openPatch() {
       <ul class="checks">
         <li class="warn">Das Spiel muss dafür geschlossen sein.</li>
         <li>Originaldateien bleiben unverändert, geschrieben wird nur ${target}.</li>
-        <li>Rückgängig jederzeit über „Mod entfernen“.</li>
+        <li>Rückgängig über „Mod entfernen“. Das setzt die Spielregeln zurück, nicht deinen Spielstand: Was du mit dem Mod gesammelt hast, bleibt.</li>
         <li>Koop: Deine Partnerin braucht danach denselben Mod-Code${code ? ` <b>${code}</b>` : ""}.</li>
       </ul>${LIVE ? "" : `<p style="margin:14px 0 0;font-size:12px;color:var(--dim)">Demo – es wird nichts geschrieben.</p>`}`;
     $("#patchActs").innerHTML = `<button class="btn" data-close>Abbrechen</button><button class="btn primary small" id="btnDoPatch" data-autofocus><span>Jetzt patchen</span></button>`;
@@ -1010,7 +1050,12 @@ async function runPatch() {
   let res;
   if (LIVE) {
     step(0, "run");
-    [res] = await Promise.all([api("/api/patch", { diff: d }).catch(() => ({ error: "Keine Verbindung zum Tool." })), sleep(500)]);
+    [res] = await Promise.all([api("/api/patch", { diff: d, dataVersion: SERVER.dataVersion }).catch(() => ({ error: "Keine Verbindung zum Tool." })), sleep(500)]);
+    if (res.stale) {
+      $("#patchBody").innerHTML = `<p>${esc(res.error)}</p>`;
+      await sleep(1800);
+      return reloadForGameUpdate();
+    }
     if (res.error) {
       $("#patchBody").innerHTML = `<p class="err">${esc(res.error)}</p>`;
       $("#patchActs").innerHTML = `<button class="btn" data-close>Schließen</button><button class="btn primary small" id="btnDoPatch" data-autofocus><span>Nochmal versuchen</span></button>`;
@@ -1022,6 +1067,7 @@ async function runPatch() {
   finishPatch(res, d);
 }
 function finishPatch(res, d) {
+  FIXES = [];
   installed = { pak: res.pak, code: res.code, diff: d, legacy: false, outdated: false };
   preview = { key: stable(d), code: res.code, files: res.files || [], error: null };
   $("#patchBody").innerHTML = `<div class="result"><small>Fertig! Gespeichert als ${esc(res.pak)} · Dein Mod-Code</small><div class="big">${esc(res.code)}</div>
@@ -1034,8 +1080,10 @@ function finishPatch(res, d) {
   renderChrome();
 }
 async function removeMod() {
-  if (!installed) return;
-  if (!await ask("Mod entfernen?", `${installed.pak} wird gelöscht, das Spiel ist danach wieder original. Deine Einstellungen hier bleiben erhalten. Im Koop muss auch deine Partnerin den Mod entfernen.`, "Mod entfernen")) return;
+  if (!installed || installed.foreign) return;
+  if (!await ask("Mod entfernen?", `${installed.pak} wird aus dem Spielordner entfernt (eine Sicherung bleibt im Tool). Das Spiel lädt danach wieder die Originaldaten. `
+    + `Dein Spielstand wird dabei nicht zurückgesetzt: Was du mit dem Mod gesammelt oder gespeichert hast, bleibt. Deine Einstellungen hier bleiben erhalten. `
+    + `Im Koop muss auch deine Partnerin den Mod entfernen.`, "Mod entfernen")) return;
   if (LIVE) {
     const r = await api("/api/remove", {}).catch(() => ({ error: "Keine Verbindung zum Tool." }));
     if (r.error) { toast(r.error); return; }
@@ -1043,7 +1091,7 @@ async function removeMod() {
   installed = null;
   closeModal($("#mPatch"));
   render();
-  toast("Mod entfernt – das Spiel ist wieder original");
+  toast("Mod entfernt – das Spiel lädt wieder die Originaldaten");
 }
 
 // ---------- Updates, Spielordner, Verbindung ----------
@@ -1081,8 +1129,17 @@ async function browseGame() {
   const r = await api("/api/browse", {}).catch(() => ({}));
   if (r.ok) location.reload();
 }
+// Steam hat das Spiel aktualisiert: Einstellungen merken und mit den neuen Spieldaten neu laden
+function reloadForGameUpdate() {
+  try { sessionStorage.setItem(RESTORE_KEY, JSON.stringify(diff())); } catch {}
+  location.reload();
+}
 if (LIVE) {
-  setInterval(() => api("/api/ping", {}).catch(() => {}), 20000);
+  setInterval(async () => {
+    const r = await api("/api/ping", {}).catch(() => ({}));
+    // nicht mitten in einem offenen Dialog neu laden – beim nächsten Ping oder spätestens beim Patchen
+    if (r.dataVersion && r.dataVersion !== SERVER.dataVersion && !document.querySelector(".modal.open")) reloadForGameUpdate();
+  }, 20000);
   addEventListener("pagehide", () => { api("/api/bye", {}).catch(() => {}); });
   setTimeout(() => checkUpdate(false), 1200);
 }
@@ -1094,7 +1151,7 @@ function toast(msg, undo) {
   $("#toastAct").hidden = !undo;
   $("#toast").classList.add("show");
   clearTimeout(tt);
-  tt = setTimeout(() => { $("#toast").classList.remove("show"); toastUndo = null; }, undo ? 6000 : 2600);
+  tt = setTimeout(() => { $("#toast").classList.remove("show"); toastUndo = null; }, undo || msg.length > 60 ? 6000 : 2600);
 }
 
 // ---------- Events ----------
@@ -1177,6 +1234,8 @@ document.addEventListener("input", e => {
 document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m) closeModal(m); }));
 
 render(false);
+if (restored === "ok") toast("Das Spiel wurde aktualisiert – neue Spieldaten geladen, deine Einstellungen sind übernommen.");
+else if (restored === "bad") toast("Das Spiel wurde aktualisiert. Deine letzten Einstellungen passen nicht mehr zu den neuen Spieldaten.");
 </script>
 </body>
 </html>

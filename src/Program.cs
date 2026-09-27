@@ -16,7 +16,7 @@ using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("DERO-Patcher")]
 [assembly: System.Reflection.AssemblyProduct("DERO-Patcher")]
-[assembly: System.Reflection.AssemblyVersion("2.0.1.0")]
+[assembly: System.Reflection.AssemblyVersion("2.1.0.0")]
 
 namespace Dero
 {
@@ -26,6 +26,32 @@ namespace Dero
         static extern bool SetProcessDPIAware();
 
         static Process browser;
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr sec, uint disposition, uint flags, IntPtr template);
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct FileInfoByHandle
+        {
+            public uint Attributes;
+            public System.Runtime.InteropServices.ComTypes.FILETIME Created, Accessed, Written;
+            public uint VolumeSerial, SizeHigh, SizeLow, Links, IndexHigh, IndexLow;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool GetFileInformationByHandle(Microsoft.Win32.SafeHandles.SafeFileHandle h, out FileInfoByHandle info);
+
+        // Volume + Dateiindex eines Ordners (folgt Junctions/Symlinks). null = nicht ermittelbar
+        static string FileId(string dir)
+        {
+            // Zugriff 0 = nur Metadaten, Freigabe lesen/schreiben/loeschen, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS (noetig fuer Ordner)
+            using (var h = CreateFile(dir, 0, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero))
+            {
+                FileInfoByHandle fi;
+                if (h.IsInvalid || !GetFileInformationByHandle(h, out fi)) return null;
+                return fi.VolumeSerial + ":" + fi.IndexHigh + ":" + fi.IndexLow;
+            }
+        }
 
         [STAThread]
         static int Main(string[] args)
@@ -225,8 +251,19 @@ namespace Dero
             return Json.O("craft", Json.O(f.Id, tiers));
         }
 
+        // Exit 0 = ok, 1 = Fehler (siehe .log), 3 = Ziel liegt im echten Spielordner oder ist nicht pruefbar (nichts geschrieben)
         static int SelfTest(string gameDir, string outPak, string settings)
         {
+            // Testausgaben nie in den echten Spielordner, nur in eine Kopie. Originaldateien schuetzt zusaetzlich WriteFile.
+            // Verglichen wird die Dateikennung, nicht der Pfad: Junctions, Symlinks und 8.3-Kurznamen zeigen sonst am Vergleich vorbei.
+            string real = GameFiles.ResolveSourceDir(GameFiles.AutoDetect());
+            if (real != null)
+                try
+                {
+                    string outId = FileId(Path.GetDirectoryName(Path.GetFullPath(outPak))), realId = FileId(real);
+                    if (outId == null || realId == null || outId == realId) return 3;
+                }
+                catch { return 3; }   // Pfad nicht auswertbar: lieber nichts schreiben
             var log = new StringBuilder();
             try
             {
